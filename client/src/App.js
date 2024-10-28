@@ -1,8 +1,14 @@
 import logo from './logo.svg';
 import './App.css';
+import HomePage from './pages/HomePage/HomePage';
+
 
 function App() {
   return (
+    <HomePage />
+  );
+}
+/*
     <div className="App">
       <header className="App-header">
         <img src={logo} className="App-logo" alt="logo" />
@@ -20,6 +26,6 @@ function App() {
       </header>
     </div>
   );
-}
+}*/
 
 export default App;

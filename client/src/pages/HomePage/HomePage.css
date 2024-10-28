@@ -1,80 +1,138 @@
 /* HomePage.css */
 
 :root {
-    --primary-color: #1E3A5F;
-    --secondary-color: #00B3A6;
-    --light-gray: #F5F5F5;
-    --medium-gray: #C1C1C1;
-    --charcoal: #333333;
-    --highlight-color: #FF5722;
-    --accent-color: #B388FF;
-    --success-color: #4CAF50;
-    --warning-color: #FFC107;
-    --error-color: #F44336;
-  }
-  
-  .homepage {
-    background-color: var(--light-gray);
-    color: var(--charcoal);
-    font-family: Arial, sans-serif;
-  }
-  
-  .header {
-    background-color: var(--primary-color);
-    color: white;
-    padding: 20px;
-    text-align: center;
-  }
-  
-  .header .cta-button {
-    background-color: var(--highlight-color);
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    cursor: pointer;
-  }
-  
-  .navbar {
-    background-color: var(--primary-color);
-    color: white;
-    padding: 10px;
-    display: flex;
-    justify-content: center;
-  }
-  
-  .navbar ul {
-    list-style-type: none;
-    display: flex;
-    gap: 20px;
-  }
-  
-  .navbar li {
-    color: var(--light-gray);
-    cursor: pointer;
-  }
-  
-  .content {
-    padding: 20px;
-  }
-  
-  .highlight-section {
-    background-color: var(--secondary-color);
-    color: white;
-    padding: 20px;
-    margin-bottom: 20px;
-  }
-  
-  .secondary-section {
-    background-color: var(--light-gray);
-    color: var(--charcoal);
-    padding: 20px;
-    border: 1px solid var(--medium-gray);
-  }
-  
-  .footer {
-    background-color: var(--primary-color);
-    color: var(--light-gray);
-    text-align: center;
-    padding: 10px;
-  }
-  
+  --primary-color: #1E3A5F;        /* Navy Blue */
+  --secondary-color: #00B3A6;      /* Teal */
+  --light-gray: #F5F5F5;           /* Light Gray */
+  --medium-gray: #C1C1C1;          /* Medium Gray */
+  --charcoal: #333333;             /* Charcoal */
+  --highlight-color: #FF5722;      /* Bright Orange */
+  --accent-color: #B388FF;         /* Pastel Purple */
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: var(--light-gray);
+  color: var(--charcoal);
+}
+
+/* Hero Section */
+.hero-section {
+  background: linear-gradient(rgba(30, 58, 95, 0.7), rgba(0, 179, 166, 0.8)), url('./Images/eventscom_cover.jpeg') center/cover;
+  color: white;
+  padding: 100px 20px;
+  text-align: center;
+  animation: fadeIn 1.5s ease-in-out;
+}
+
+.hero-section h1 {
+  font-size: 2.5rem;
+  margin: 0;
+}
+
+.hero-section p {
+  font-size: 1.2rem;
+  margin: 10px 0 30px;
+}
+
+.cta-button {
+  background-color: var(--highlight-color);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 25px;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: transform 0.3s ease;
+}
+
+.cta-button:hover {
+  transform: scale(1.1);
+}
+
+/* Features Section */
+.features {
+  text-align: center;
+  padding: 50px 20px;
+}
+
+.features h2 {
+  font-size: 2rem;
+  margin-bottom: 20px;
+}
+
+.feature-cards {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.card {
+  background-color: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  padding: 20px;
+  max-width: 300px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.card h3 {
+  color: var(--secondary-color);
+}
+
+.card p {
+  color: var(--charcoal);
+}
+
+.card-button {
+  background-color: var(--highlight-color);
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.card-button:hover {
+  background-color: var(--accent-color);
+}
+
+/* About Section */
+.about {
+  background-color: var(--light-gray);
+  text-align: center;
+  padding: 50px 20px;
+}
+
+.about h2 {
+  font-size: 2rem;
+  color: var(--primary-color);
+}
+
+.about p {
+  max-width: 600px;
+  margin: 0 auto;
+  font-size: 1.1rem;
+}
+
+/* Footer */
+.footer {
+  background-color: var(--primary-color);
+  color: var(--light-gray);
+  text-align: center;
+  padding: 20px;
+  font-size: 0.9rem;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
