@@ -1,4 +1,5 @@
 import React from 'react';
+import { FaCheckCircle, FaUsers, FaCalendarCheck } from 'react-icons/fa';
 import './HomePage.css';
 
 const HomePage = () => {
@@ -33,10 +34,26 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* About Section */}
+      {/* Enhanced About Section */}
       <section className="about">
         <h2>About Evently</h2>
-        <p>Evently is designed to simplify your event management. From planning to tracking RSVPs, our platform offers all the tools you need for a seamless experience.</p>
+        <div className="about-content">
+          <div className="about-item">
+            <FaCheckCircle className="about-icon" />
+            <h3>Reliable Service</h3>
+            <p>We provide a seamless experience with dependable features and functionality.</p>
+          </div>
+          <div className="about-item">
+            <FaUsers className="about-icon" />
+            <h3>Community Focused</h3>
+            <p>Our platform encourages connection and collaboration among attendees.</p>
+          </div>
+          <div className="about-item">
+            <FaCalendarCheck className="about-icon" />
+            <h3>Efficient Management</h3>
+            <p>Streamline event planning with tools to track RSVPs, manage schedules, and send updates.</p>
+          </div>
+        </div>
       </section>
 
       {/* Footer */}
