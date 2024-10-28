@@ -1,0 +1,80 @@
+/* HomePage.css */
+
+:root {
+    --primary-color: #1E3A5F;
+    --secondary-color: #00B3A6;
+    --light-gray: #F5F5F5;
+    --medium-gray: #C1C1C1;
+    --charcoal: #333333;
+    --highlight-color: #FF5722;
+    --accent-color: #B388FF;
+    --success-color: #4CAF50;
+    --warning-color: #FFC107;
+    --error-color: #F44336;
+  }
+  
+  .homepage {
+    background-color: var(--light-gray);
+    color: var(--charcoal);
+    font-family: Arial, sans-serif;
+  }
+  
+  .header {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 20px;
+    text-align: center;
+  }
+  
+  .header .cta-button {
+    background-color: var(--highlight-color);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .navbar {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .navbar ul {
+    list-style-type: none;
+    display: flex;
+    gap: 20px;
+  }
+  
+  .navbar li {
+    color: var(--light-gray);
+    cursor: pointer;
+  }
+  
+  .content {
+    padding: 20px;
+  }
+  
+  .highlight-section {
+    background-color: var(--secondary-color);
+    color: white;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .secondary-section {
+    background-color: var(--light-gray);
+    color: var(--charcoal);
+    padding: 20px;
+    border: 1px solid var(--medium-gray);
+  }
+  
+  .footer {
+    background-color: var(--primary-color);
+    color: var(--light-gray);
+    text-align: center;
+    padding: 10px;
+  }
+  
