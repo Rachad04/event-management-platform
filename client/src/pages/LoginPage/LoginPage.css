@@ -1,5 +1,4 @@
-/* pages/LoginPage/LoginPage.css */
-@import url('../HomePage/HomePage.css'); /* Import color variables */
+@import url("../HomePage/HomePage.css"); /* Import color variables */
 
 .login-page {
   display: flex;

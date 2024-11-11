@@ -1,22 +1,31 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import HomePage from './pages/HomePage/HomePage';
-import LoginPage from './pages/LoginPage/LoginPage'; // Make sure to import your LoginPage
-import SignUpPage from './pages/SignUpPage/SignUpPage'; // Make sure to import your SignUpPage
-import "./App.css"; // Import your stylesheets
-import "./variables.css"; // Import your additional stylesheets
+import "./App.css";
+import "./variables.css";
+import React from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import HomePage from "./pages/HomePage/HomePage";
+import UserPage from "./pages/UserPage/UserPage";
+import LoginPage from "./pages/LoginPage/LoginPage";
+import SignUpPage from "./pages/SignUpPage/SignUpPage";
+import ProtectedRoute from "./Components/ProtectedRoute";
 
 function App() {
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route exact path="/" element={<HomePage />} />
+        <Route
+          path="/user"
+          element={
+            <ProtectedRoute>
+              <UserPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/sign-up" element={<SignUpPage />} />
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
 }
 
 export default App;
-
