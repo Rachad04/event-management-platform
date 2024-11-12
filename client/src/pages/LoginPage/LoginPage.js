@@ -7,7 +7,6 @@ import "./LoginPage.css";
 
 function LoginPage() {
   const { login } = useContext(AuthContext);
-  const history = useNavigate();
 
   const [formData, setFormData] = useState({
     email: "",

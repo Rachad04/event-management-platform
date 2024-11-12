@@ -17,12 +17,19 @@
 .login-form {
   display: flex;
   flex-direction: column;
-  max-width: 400px;
+  max-width: 440px;
   width: 100%;
   background-color: white;
   padding: 30px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   border-radius: 8px;
+}
+
+.login-form div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
 }
 
 .login-form label {
@@ -31,10 +38,10 @@
 }
 
 .login-form input {
+  width: 15rem;
   padding: 10px;
   border: 1px solid var(--medium-gray);
   border-radius: 4px;
-  margin-bottom: 15px;
 }
 
 .login-button {

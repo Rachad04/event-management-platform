@@ -27,78 +27,87 @@ const pool = new Pool({
 // Helper function to generate JWT
 const generateToken = (user) => {
   return jwt.sign(
-    { id: user.id, username: user.username, email: user.email },
+    { id: user.id, userType: user.userType },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN }
+    {
+      expiresIn: process.env.JWT_EXPIRES_IN,
+    }
   );
+};
+
+const userTypeIsValid = (type) => {
+  switch (type) {
+    case "user":
+      return true;
+    case "company":
+      return true;
+    case "sponsor":
+      return true;
+  }
+  return false;
 };
 
 // Sign Up Route
 app.post(
   "/api/signup",
   [
-    body("username").isLength({ min: 3 }).trim().escape(),
     body("email").isEmail().normalizeEmail(),
     body("password").isLength({ min: 8 }),
   ],
   async (req, res) => {
+    console.log("got request");
+
     // Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
+    console.log("validated input");
+
     // Extract data
-    const {
-      firstName,
-      lastName,
-      phoneNumber,
-      email,
-      location,
-      birthday,
-      gender,
-      username,
-      password,
-      password2,
-    } = req.body;
+    const { email, userType, password, password2 } = req.body;
+
+    console.log("extracted data");
 
     try {
       if (password != password2) {
         return res.status(400).json({ message: "Passwords do not match" });
       }
 
+      if (!userTypeIsValid(userType)) {
+        return res
+          .status(401)
+          .json({ message: "The user type isn't a valid type" });
+      }
+      console.log("validated data");
+
       // Check if user exists
       const userExists = await pool.query(
-        "SELECT * FROM users WHERE email_address = $1 OR username = $2",
-        [email, username]
+        "SELECT * FROM users WHERE email_address = $1",
+        [email]
       );
+      console.log("checked existance");
 
       if (userExists.rows.length > 0) {
-        return res.status(400).json({ message: "User already exists" });
+        return res.status(402).json({ message: "User already exists" });
       }
 
       // Hash password
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
+      console.log("hashed password");
 
       // Insert user into database
       const newUser = await pool.query(
-        "INSERT INTO users (first_name, last_name, phone_number, email_address, location, birthday, gender, username, password) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *",
-        [
-          firstName,
-          lastName,
-          phoneNumber,
-          email,
-          location,
-          birthday,
-          gender,
-          username,
-          hashedPassword,
-        ]
+        "INSERT INTO users (email_address, password, user_type) VALUES ($1, $2, $3) RETURNING *",
+        [email, hashedPassword, userType]
       );
+      console.log("inserted new user");
 
       // Generate token
       const token = generateToken(newUser.rows[0]);
+      console.log("generated token");
 
       res.status(201).json({ token });
     } catch (error) {

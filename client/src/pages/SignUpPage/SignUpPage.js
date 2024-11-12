@@ -14,32 +14,16 @@ function SignUpPage() {
   };
 
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    phoneNumber: "",
     email: "",
-    location: "",
-    birthday: "",
-    gender: "",
-    username: "",
     password: "",
+    userType: "",
     password2: "",
   });
 
   const [errors, setErrors] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const {
-    firstName,
-    lastName,
-    phoneNumber,
-    email,
-    location,
-    birthday,
-    gender,
-    username,
-    password,
-    password2,
-  } = formData;
+  const { email, userType, password, password2 } = formData;
 
   const onChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -47,6 +31,7 @@ function SignUpPage() {
   const onSubmit = async (e) => {
     e.preventDefault();
     setErrors([]);
+    setLoading(true); // Set loading state
 
     try {
       const res = await axios.post(
@@ -63,6 +48,8 @@ function SignUpPage() {
       } else {
         setErrors([{ msg: "Server error" }]);
       }
+    } finally {
+      setLoading(false); // Reset loading state
     }
   };
 
@@ -77,79 +64,11 @@ function SignUpPage() {
         ))}
       <form className="sign-up-form" autoComplete="off" onSubmit={onSubmit}>
         <div>
-          <label>First Name:</label>
-          <input
-            type="text"
-            name="firstName"
-            value={firstName}
-            onChange={onChange}
-            required
-          />
-        </div>
-        <div>
-          <label>Last Name:</label>
-          <input
-            type="text"
-            name="lastName"
-            value={lastName}
-            onChange={onChange}
-            required
-          />
-        </div>
-        <div>
-          <label>Phone Number:</label>
-          <input
-            type="text"
-            name="phoneNumber"
-            value={phoneNumber}
-            onChange={onChange}
-            required
-          />
-        </div>
-        <div>
           <label>Email:</label>
           <input
             type="email"
             name="email"
             value={email}
-            onChange={onChange}
-            required
-          />
-        </div>
-        <div>
-          <label>Location:</label>
-          <input
-            type="text"
-            name="location"
-            value={location}
-            onChange={onChange}
-            required
-          />
-        </div>
-        <div>
-          <label>Birthday:</label>
-          <input
-            type="date"
-            name="birthday"
-            value={birthday}
-            onChange={onChange}
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="gender">Gender:</label>
-          <select value={gender} onChange={onChange} name="gender">
-            <option value="">Select Gender</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-          </select>
-        </div>
-        <div>
-          <label>Username:</label>
-          <input
-            type="text"
-            name="username"
-            value={username}
             onChange={onChange}
             required
           />
@@ -174,8 +93,17 @@ function SignUpPage() {
             required
           />
         </div>
-        <button className="sign-up-button" type="submit">
-          Sign Up
+        <div>
+          <label htmlFor="userType">User Type:</label>
+          <select value={userType} onChange={onChange} name="userType">
+            <option value="">Select Type</option>
+            <option value="user">Person</option>
+            <option value="company">Company</option>
+            <option value="sponsor">Sponsor</option>
+          </select>
+        </div>
+        <button className="sign-up-button" type="submit" disabled={loading}>
+          {loading ? "Signing Up..." : "Sign Up"}
         </button>
       </form>
     </div>
