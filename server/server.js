@@ -35,6 +35,13 @@ const generateToken = (user) => {
   );
 };
 
+// Utility function to extract username from email
+const getEmailUsername = (email) => {
+  if (typeof email !== "string") return null;
+  const [username] = email.split("@");
+  return username || null;
+};
+
 const userTypeIsValid = (type) => {
   switch (type) {
     case "user":
@@ -93,6 +100,9 @@ app.post(
         return res.status(402).json({ message: "User already exists" });
       }
 
+      // Generate username
+      const userName = getEmailUsername(email);
+
       // Hash password
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
@@ -100,8 +110,8 @@ app.post(
 
       // Insert user into database
       const newUser = await pool.query(
-        "INSERT INTO users (email_address, password, user_type) VALUES ($1, $2, $3) RETURNING *",
-        [email, hashedPassword, userType]
+        "INSERT INTO users (email_address, username, password, user_type) VALUES ($1, $2, $3, $4) RETURNING *",
+        [email, userName, hashedPassword, userType]
       );
       console.log("inserted new user");
 
