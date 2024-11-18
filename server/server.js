@@ -172,6 +172,18 @@ app.post(
   }
 );
 
+// Example in Express.js
+app.get("/api/users/:user_id", async (req, res) => {
+  const userId = req.params.user_id;
+  const user = await UserModel.findById(userId); // Adjust based on your DB
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  res.json(user);
+});
+
 // Protected Route Example
 app.get("/api/user", authenticateToken, (req, res) => {
   res.json({

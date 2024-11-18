@@ -1,5 +1,5 @@
 /* pages/SignUpPage/SignUpPage.css */
-@import url("../HomePage/HomePage.css"); /* Import color variables */
+@import url("../../variables.css"); /* Import color variables */
 
 .sign-up-page {
   display: flex;

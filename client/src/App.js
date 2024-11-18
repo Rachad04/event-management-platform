@@ -13,16 +13,16 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route exact path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/sign-up" element={<SignUpPage />} />
         <Route
-          path="/user"
+          path="/users/:user_id"
           element={
             <ProtectedRoute>
               <UserPage />
             </ProtectedRoute>
           }
         />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/sign-up" element={<SignUpPage />} />
       </Routes>
     </BrowserRouter>
   );

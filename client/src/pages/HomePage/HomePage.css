@@ -1,14 +1,5 @@
 /* HomePage.css */
-
-:root {
-  --primary-color: #1E3A5F;        /* Navy Blue */
-  --secondary-color: #00B3A6;      /* Teal */
-  --light-gray: #F5F5F5;           /* Light Gray */
-  --medium-gray: #C1C1C1;          /* Medium Gray */
-  --charcoal: #333333;             /* Charcoal */
-  --highlight-color: #FF5722;      /* Bright Orange */
-  --accent-color: #B388FF;         /* Pastel Purple */
-}
+@import url("../../variables.css"); /* Import color variables */
 
 body {
   margin: 0;
@@ -17,9 +8,36 @@ body {
   color: var(--charcoal);
 }
 
+.header {
+  height: 3rem;
+  width: 98vw;
+  background-color: transparent;
+  position: fixed;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.redirect-button {
+  height: 2rem;
+  width: 5rem;
+  align-content: center;
+  background-color: var(--highlight-color);
+  border: 0;
+  border-radius: 5px;
+  margin: 0.5rem;
+}
+
+.redirect-button a {
+  text-decoration: none;
+  color: white;
+  font-weight: 500;
+}
+
 /* Hero Section */
 .hero-section {
-  background: linear-gradient(rgba(30, 58, 95, 0.7), rgba(0, 179, 166, 0.8)), url('./Images/eventscom_cover.jpeg') center/cover;
+  background: linear-gradient(rgba(30, 58, 95, 0.7), rgba(0, 179, 166, 0.8)),
+    url("./Images/eventscom_cover.jpeg") center/cover;
   color: white;
   padding: 100px 20px;
   text-align: center;
@@ -101,13 +119,14 @@ body {
   margin-top: 10px;
 }
 
-.card-button:hover {
+.card-button:hover,
+.redirect-button:hover {
   background-color: var(--accent-color);
 }
 
 /* About Section */
 .about {
-  background-color: #E0F7FA; /* Light pastel teal for a soft, welcoming look */
+  background-color: #e0f7fa; /* Light pastel teal for a soft, welcoming look */
   color: var(--primary-color);
   text-align: center;
   padding: 60px 20px;
@@ -130,7 +149,12 @@ body {
 }
 
 .about-item {
-  background-color: rgba(255, 255, 255, 0.7); /* Semi-transparent white for cards */
+  background-color: rgba(
+    255,
+    255,
+    255,
+    0.7
+  ); /* Semi-transparent white for cards */
   padding: 20px;
   border-radius: 10px;
   width: 250px;
@@ -161,7 +185,6 @@ body {
   color: var(--charcoal);
 }
 
-
 /* Footer */
 .footer {
   background-color: var(--primary-color);
@@ -172,6 +195,10 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

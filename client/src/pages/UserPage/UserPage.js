@@ -1,9 +1,47 @@
 // UserPage.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import axios from "axios";
 import "./UserPage.css";
 
 const UserPage = () => {
+  const { user_id } = useParams(); // Get user ID from URL
   const [activeTab, setActiveTab] = useState("Details");
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch user data based on user ID
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await axios.get(
+          `http://localhost:5000/api/users/${user_id}`
+        );
+        setUserData(response.data);
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [user_id]);
+
+  if (loading) return <div>Loading...</div>;
+
+  if (!userData) return <div>User not found</div>;
+
+  const {
+    username,
+    firstName,
+    lastName,
+    email,
+    phone,
+    location,
+    birthday,
+    gender,
+  } = userData;
 
   return (
     <div className="page-container">
@@ -12,12 +50,12 @@ const UserPage = () => {
         <div className="profile-card">
           <div className="profile-header">
             <div className="profile-picture"></div>
-            <h2>Username</h2>
+            <h2>{username || "Username"}</h2>
           </div>
           <div className="profile-info">
-            <p>first name: name</p>
-            <p>last name: lastname</p>
-            <p>email: email@email.com</p>
+            <p>First Name: {firstName || "N/A"}</p>
+            <p>Last Name: {lastName || "N/A"}</p>
+            <p>Email: {email || "N/A"}</p>
           </div>
         </div>
 
@@ -37,13 +75,13 @@ const UserPage = () => {
 
           <div className="details-content">
             {[
-              ["first name:", "name"],
-              ["last name:", "lastname"],
-              ["email:", "email@email.com"],
-              ["Phone #:", "01111111"],
-              ["Location:", "Beirut, Lebanon"],
-              ["Birthday:", "01/01/01"],
-              ["Gender:", "Male"],
+              ["First Name:", firstName || "N/A"],
+              ["Last Name:", lastName || "N/A"],
+              ["Email:", email || "N/A"],
+              ["Phone #:", phone || "N/A"],
+              ["Location:", location || "N/A"],
+              ["Birthday:", birthday || "N/A"],
+              ["Gender:", gender || "N/A"],
             ].map(([label, value]) => (
               <div key={label} className="detail-row">
                 <span className="detail-label">{label}</span>

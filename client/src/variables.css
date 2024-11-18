@@ -9,4 +9,12 @@
   --success: #4caf50;
   --warning: #ffc107;
   --errors: #f44336;
+
+  --primary-color: #1e3a5f; /* Navy Blue */
+  --secondary-color: #00b3a6; /* Teal */
+  --light-gray: #f5f5f5; /* Light Gray */
+  --medium-gray: #c1c1c1; /* Medium Gray */
+  --charcoal: #333333; /* Charcoal */
+  --highlight-color: #ff5722; /* Bright Orange */
+  --accent-color: #b388ff; /* Pastel Purple */
 }
