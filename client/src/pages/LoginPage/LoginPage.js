@@ -1,38 +1,28 @@
-// src/components/Login.js
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import axios from "axios";
 import { AuthContext } from "../../Contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import "./LoginPage.css";
 
 function LoginPage() {
-  const { login } = useContext(AuthContext);
-
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-
+  const { auth, login } = useContext(AuthContext);
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState([]);
-
   const { email, password } = formData;
   const navigate = useNavigate();
 
-  const handleLogin = () => {
-    navigate("/user");
-  };
-
+  // Handle form input changes
   const onChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
+  // Handle form submission
   const onSubmit = async (e) => {
     e.preventDefault();
     setErrors([]);
 
     try {
       const res = await axios.post("http://localhost:5000/api/login", formData);
-      login(res.data.token);
-      handleLogin();
+      login(res.data.token); // Log the user in and store the token
     } catch (error) {
       if (error.response && error.response.data) {
         setErrors(
@@ -43,6 +33,16 @@ function LoginPage() {
       }
     }
   };
+
+  // Use useEffect to watch the auth state and navigate when user is set
+  useEffect(() => {
+    if (auth.user && auth.user.id) {
+      // Navigate to user page after user data has been updated
+      navigate(`/users/user${auth.user.id}`);
+    } else {
+      console.log("User ID is undefined"); // Debugging line
+    }
+  }, [auth.user, navigate]); // Trigger this effect when auth.user changes
 
   return (
     <div className="login-page">

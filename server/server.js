@@ -27,11 +27,9 @@ const pool = new Pool({
 // Helper function to generate JWT
 const generateToken = (user) => {
   return jwt.sign(
-    { id: user.id, userType: user.userType },
+    { id: user.id, username: user.username, userType: user.userType }, // Include username
     process.env.JWT_SECRET,
-    {
-      expiresIn: process.env.JWT_EXPIRES_IN,
-    }
+    { expiresIn: process.env.JWT_EXPIRES_IN }
   );
 };
 
@@ -172,23 +170,77 @@ app.post(
   }
 );
 
-// Example in Express.js
+// GET
 app.get("/api/users/:user_id", async (req, res) => {
-  const userId = req.params.user_id;
-  const user = await UserModel.findById(userId); // Adjust based on your DB
-
-  if (!user) {
-    return res.status(404).json({ message: "User not found" });
+  const userId = req.params.user_id; // Expecting `user123` in the URL
+  try {
+    const user = await pool.query("SELECT * FROM users WHERE user_id = $1", [
+      userId,
+    ]);
+    if (user.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json(user.rows[0]);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).json({ message: "Server error" });
   }
-
-  res.json(user);
 });
 
 // Protected Route Example
 app.get("/api/user", authenticateToken, (req, res) => {
+  console.log("Authenticated user:", req.user); // Debugging line
+
+  // Check if req.user is populated correctly
+  if (!req.user || !req.user.id) {
+    return res.status(401).json({ message: "No user authenticated" });
+  }
+
+  // Return a message with authenticated user info
   res.json({
-    message: `Hello, ${req.user.username}! This is a protected route.`,
+    message: `Hello, ${
+      req.user.username || "undefined"
+    }! This is a protected route.`,
   });
+});
+
+// Add this endpoint to your existing Express server code
+
+app.put("/api/users/:user_id", authenticateToken, async (req, res) => {
+  const userId = req.params.user_id;
+  const { firstName, lastName, phone, location, birthday, gender } = req.body;
+
+  try {
+    // First verify that the authenticated user matches the user_id
+    if (req.user.id !== parseInt(userId)) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to modify this user's details" });
+    }
+
+    // Update user details
+    const updatedUser = await pool.query(
+      `UPDATE users 
+       SET first_name = COALESCE($1, first_name),
+           last_name = COALESCE($2, last_name),
+           phone = COALESCE($3, phone),
+           location = COALESCE($4, location),
+           birthday = COALESCE($5, birthday),
+           gender = COALESCE($6, gender)
+       WHERE user_id = $7
+       RETURNING *`,
+      [firstName, lastName, phone, location, birthday, gender, userId]
+    );
+
+    if (updatedUser.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(updatedUser.rows[0]);
+  } catch (error) {
+    console.error("Error updating user:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 // Middleware to authenticate token
@@ -197,15 +249,18 @@ function authenticateToken(req, res, next) {
   const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
 
   if (!token) {
-    return res.sendStatus(401);
+    return res.sendStatus(401); // Unauthorized if token is missing
   }
 
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) {
-      return res.sendStatus(403);
+      console.error("JWT Verification Failed:", err);
+      return res.sendStatus(403); // Forbidden if token is invalid
     }
-    req.user = user;
-    next();
+
+    console.log("Decoded JWT user:", user); // Debugging line to see decoded token
+    req.user = user; // Attach user info to the request object
+    next(); // Proceed to the next middleware or route handler
   });
 }
 

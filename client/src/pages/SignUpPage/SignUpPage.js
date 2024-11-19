@@ -9,7 +9,12 @@ function SignUpPage() {
   const navigate = useNavigate();
 
   const handleSignUp = () => {
-    navigate("/user");
+    const userId = localStorage.getItem("userId");
+    if (userId) {
+      navigate(`/users/user:${userId}`);
+    } else {
+      console.error("User ID is undefined");
+    }
   };
 
   const [formData, setFormData] = useState({
@@ -18,10 +23,8 @@ function SignUpPage() {
     userType: "",
     password2: "",
   });
-
   const [errors, setErrors] = useState([]);
   const [loading, setLoading] = useState(false);
-
   const { email, userType, password, password2 } = formData;
 
   const onChange = (e) =>
@@ -30,7 +33,7 @@ function SignUpPage() {
   const onSubmit = async (e) => {
     e.preventDefault();
     setErrors([]);
-    setLoading(true); // Set loading state
+    setLoading(true);
 
     try {
       const res = await axios.post(
@@ -48,7 +51,7 @@ function SignUpPage() {
         setErrors([{ msg: "Server error" }]);
       }
     } finally {
-      setLoading(false); // Reset loading state
+      setLoading(false);
     }
   };
 
