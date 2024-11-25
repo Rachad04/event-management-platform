@@ -23,6 +23,7 @@ function LoginPage() {
     try {
       const res = await axios.post("http://localhost:5000/api/login", formData);
       login(res.data.token); // Log the user in and store the token
+      localStorage.setItem("userId", res.data.user.id);
     } catch (error) {
       if (error.response && error.response.data) {
         setErrors(
@@ -37,12 +38,11 @@ function LoginPage() {
   // Use useEffect to watch the auth state and navigate when user is set
   useEffect(() => {
     if (auth.user && auth.user.id) {
-      // Navigate to user page after user data has been updated
-      navigate(`/users/user${auth.user.id}`);
+      navigate(`/users/user/${auth.user.id}`);
     } else {
-      console.log("User ID is undefined"); // Debugging line
+      console.log("User ID is undefined");
     }
-  }, [auth.user, navigate]); // Trigger this effect when auth.user changes
+  }, [auth.user, navigate]);
 
   return (
     <div className="login-page">

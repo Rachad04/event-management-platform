@@ -27,10 +27,28 @@ const pool = new Pool({
 // Helper function to generate JWT
 const generateToken = (user) => {
   return jwt.sign(
-    { id: user.id, username: user.username, userType: user.userType }, // Include username
+    {
+      id: user.user_id || user.id, // Use user_id or id, whichever is available
+      username: user.username,
+      userType: user.user_type || user.userType,
+    },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN }
   );
+};
+
+// Middleware to authenticate token
+const authenticateToken = (req, res, next) => {
+  const token = req.header("Authorization")?.split(" ")[1];
+  if (!token) return res.status(401).json({ message: "Access Denied" });
+
+  try {
+    const verified = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = verified; // Attach user data to request object
+    next();
+  } catch (err) {
+    res.status(400).json({ message: "Invalid Token" });
+  }
 };
 
 // Utility function to extract username from email
@@ -51,6 +69,23 @@ const userTypeIsValid = (type) => {
   }
   return false;
 };
+
+// GET
+app.get("/api/users/:id", authenticateToken, async (req, res) => {
+  if (req.user.id !== parseInt(req.params.id)) {
+    return res.status(403).json({ message: "Unauthorized access" });
+  }
+
+  const user = await pool.query("SELECT * FROM users WHERE user_id = $1", [
+    req.params.id,
+  ]);
+
+  if (!user.rows[0]) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  res.json(user.rows[0]);
+});
 
 // Sign Up Route
 app.post(
@@ -170,23 +205,6 @@ app.post(
   }
 );
 
-// GET
-app.get("/api/users/:user_id", async (req, res) => {
-  const userId = req.params.user_id; // Expecting `user123` in the URL
-  try {
-    const user = await pool.query("SELECT * FROM users WHERE user_id = $1", [
-      userId,
-    ]);
-    if (user.rows.length === 0) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    res.json(user.rows[0]);
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
 // Protected Route Example
 app.get("/api/user", authenticateToken, (req, res) => {
   console.log("Authenticated user:", req.user); // Debugging line
@@ -242,27 +260,6 @@ app.put("/api/users/:user_id", authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
-// Middleware to authenticate token
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
-
-  if (!token) {
-    return res.sendStatus(401); // Unauthorized if token is missing
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      console.error("JWT Verification Failed:", err);
-      return res.sendStatus(403); // Forbidden if token is invalid
-    }
-
-    console.log("Decoded JWT user:", user); // Debugging line to see decoded token
-    req.user = user; // Attach user info to the request object
-    next(); // Proceed to the next middleware or route handler
-  });
-}
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);

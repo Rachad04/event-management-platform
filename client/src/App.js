@@ -16,11 +16,11 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/sign-up" element={<SignUpPage />} />
         <Route
-          path="/users/user/:user_id" // Correct dynamic parameter path
+          path="/users/user/:user_id"
           element={
-            // <ProtectedRoute>
-            <UserPage />
-            // </ProtectedRoute>
+            <ProtectedRoute>
+              <UserPage />
+            </ProtectedRoute>
           }
         />
       </Routes>
