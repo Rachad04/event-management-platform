@@ -95,42 +95,33 @@ app.post(
     body("password").isLength({ min: 8 }),
   ],
   async (req, res) => {
-    console.log("got request");
-
     // Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    console.log("validated input");
-
     // Extract data
     const { email, userType, password, password2 } = req.body;
 
-    console.log("extracted data");
-
     try {
-      if (password != password2) {
+      // Perform all validations before database operations
+      if (password !== password2) {
         return res.status(400).json({ message: "Passwords do not match" });
       }
 
       if (!userTypeIsValid(userType)) {
-        return res
-          .status(401)
-          .json({ message: "The user type isn't a valid type" });
+        return res.status(401).json({ message: "Invalid user type" });
       }
-      console.log("validated data");
 
-      // Check if user exists
+      // Check if user exists - use SELECT FOR UPDATE to prevent race conditions
       const userExists = await pool.query(
-        "SELECT * FROM users WHERE email_address = $1",
+        "SELECT * FROM users WHERE email_address = $1 FOR UPDATE",
         [email]
       );
-      console.log("checked existance");
 
       if (userExists.rows.length > 0) {
-        return res.status(402).json({ message: "User already exists" });
+        return res.status(409).json({ message: "User already exists" });
       }
 
       // Generate username
@@ -139,23 +130,36 @@ app.post(
       // Hash password
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
-      console.log("hashed password");
 
-      // Insert user into database
-      const newUser = await pool.query(
-        "INSERT INTO users (email_address, username, password, user_type) VALUES ($1, $2, $3, $4) RETURNING *",
-        [email, userName, hashedPassword, userType]
-      );
-      console.log("inserted new user");
+      // Insert user into database within a transaction
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const newUser = await client.query(
+          "INSERT INTO users (email_address, username, password, user_type) VALUES ($1, $2, $3, $4) RETURNING *",
+          [email, userName, hashedPassword, userType]
+        );
+        await client.query("COMMIT");
 
-      // Generate token
-      const token = generateToken(newUser.rows[0]);
-      console.log("generated token");
+        // Generate token
+        const token = generateToken(newUser.rows[0]);
 
-      res.status(201).json({ token });
+        res.status(201).json({
+          token,
+          user: {
+            id: newUser.rows[0].user_id,
+            username: newUser.rows[0].username,
+          },
+        });
+      } catch (insertError) {
+        await client.query("ROLLBACK");
+        throw insertError;
+      } finally {
+        client.release();
+      }
     } catch (error) {
       console.error(error.message);
-      res.status(500).send("Server error");
+      res.status(500).json({ message: "Server error", error: error.message });
     }
   }
 );
