@@ -245,7 +245,7 @@ app.put("/api/users/:user_id", authenticateToken, async (req, res) => {
       `UPDATE users 
        SET first_name = COALESCE($1, first_name),
            last_name = COALESCE($2, last_name),
-           phone = COALESCE($3, phone),
+           phone_number = COALESCE($3, phone_number),
            location = COALESCE($4, location),
            birthday = COALESCE($5, birthday),
            gender = COALESCE($6, gender)

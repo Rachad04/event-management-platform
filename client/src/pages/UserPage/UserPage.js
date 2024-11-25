@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import "./UserPage.css";
@@ -8,7 +8,6 @@ const axiosInstance = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Interceptor for setting Authorization header dynamically
 axiosInstance.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
@@ -23,7 +22,7 @@ const UserPage = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({}); // Single source of truth for form data
+  const [formData, setFormData] = useState(null); // Change to null initially
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -59,6 +58,13 @@ const UserPage = () => {
     if (user_id) fetchUserData();
   }, [user_id]);
 
+  // When userData changes and we want to start editing, set formData
+  useEffect(() => {
+    if (isEditing && userData) {
+      setFormData({ ...userData });
+    }
+  }, [isEditing, userData]);
+
   if (error) {
     return <div>{error}</div>;
   }
@@ -82,7 +88,7 @@ const UserPage = () => {
   if (loading) return <div>Loading...</div>;
   if (!userData) return <div>User not found</div>;
 
-  const EditForm = () => (
+  const EditForm = (
     <form onSubmit={handleSubmit} className="edit-form">
       <div className="form-group">
         <label htmlFor="firstName">First Name:</label>
@@ -90,7 +96,7 @@ const UserPage = () => {
           id="firstName"
           type="text"
           name="firstName"
-          value={formData.firstName || ""}
+          value={formData?.firstName || ""}
           onChange={handleInputChange}
           className="form-input"
         />
@@ -102,7 +108,7 @@ const UserPage = () => {
           id="lastName"
           type="text"
           name="lastName"
-          value={formData.lastName || ""}
+          value={formData?.lastName || ""}
           onChange={handleInputChange}
           className="form-input"
         />
@@ -114,7 +120,7 @@ const UserPage = () => {
           id="phone"
           type="tel"
           name="phone"
-          value={formData.phone || ""}
+          value={formData?.phone || ""}
           onChange={handleInputChange}
           className="form-input"
         />
@@ -126,7 +132,7 @@ const UserPage = () => {
           id="location"
           type="text"
           name="location"
-          value={formData.location || ""}
+          value={formData?.location || ""}
           onChange={handleInputChange}
           className="form-input"
         />
@@ -138,7 +144,7 @@ const UserPage = () => {
           id="birthday"
           type="date"
           name="birthday"
-          value={formData.birthday || ""}
+          value={formData?.birthday || ""}
           onChange={handleInputChange}
           className="form-input"
         />
@@ -149,7 +155,7 @@ const UserPage = () => {
         <select
           id="gender"
           name="gender"
-          value={formData.gender || ""}
+          value={formData?.gender || ""}
           onChange={handleInputChange}
           className="form-input"
         >
@@ -167,7 +173,6 @@ const UserPage = () => {
           type="button"
           className="cancel-button"
           onClick={() => {
-            setFormData(userData);
             setIsEditing(false);
           }}
         >
@@ -210,7 +215,7 @@ const UserPage = () => {
             {success && <div className="success-message">{success}</div>}
 
             {isEditing ? (
-              <EditForm />
+              EditForm
             ) : (
               <>
                 {[
