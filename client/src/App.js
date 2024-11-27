@@ -6,6 +6,7 @@ import HomePage from "./pages/HomePage/HomePage";
 import UserPage from "./pages/UserPage/UserPage";
 import LoginPage from "./pages/LoginPage/LoginPage";
 import SignUpPage from "./pages/SignUpPage/SignUpPage";
+import EventsPage  from "./pages/EventsPage/EventsPage";
 import ProtectedRoute from "./Components/ProtectedRoute";
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
         <Route exact path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/sign-up" element={<SignUpPage />} />
+        <Route path="/events" element={<EventsPage />} />
         <Route
           path="/users/user/:user_id" // Correct dynamic parameter path
           element={
