@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import "./EventsPage.css";
 import { Link } from "react-router-dom";
 import noImageIcon from "./Images/no-image.png";
@@ -12,6 +12,7 @@ const events = [
     location: "Public Beach Beirut",
     tags: ["Activity"],
     buttonText: "Get Tickets",
+    buttonLink: "/tickets/1",
     image: beachimage,
   },
   {
@@ -21,7 +22,8 @@ const events = [
     location: "",
     tags: ["Activity", "Birthday in Beirut", "Cultural Tour"],
     buttonText: "Get Tickets",
-    image: "", // No image for this event
+    buttonLink: "/tickets/2",
+    image: "",
   },
   {
     id: 3,
@@ -30,7 +32,8 @@ const events = [
     location: "",
     tags: ["Activity", "Chocolate Workshop", "Choco Fun"],
     buttonText: "Get Tickets",
-    image: "path/to/chocolate-museum-image.jpg",
+    buttonLink: "/tickets/3",
+    image: noImageIcon,
   },
   {
     id: 4,
@@ -39,47 +42,86 @@ const events = [
     location: "+5 dates",
     tags: ["Activity"],
     buttonText: "Get Tickets",
-    image: "", // No image for this event
+    buttonLink: "/tickets/4",
+    image: "",
   },
   {
-    id: 1,
+    id: 5,
     title: "BEACH CLEAN UP FOR FAMILY",
     date: "Mon, November 13, 2023",
     location: "Public Beach Beirut",
     tags: ["Activity"],
     buttonText: "Get Tickets",
+    buttonLink: "/tickets/5",
     image: beachimage,
   },
   {
-    id: 2,
+    id: 6,
     title: "Birthday Party Package - Beirut Cultural Tour",
     date: "Available every day",
     location: "",
     tags: ["Activity", "Birthday in Beirut", "Cultural Tour"],
     buttonText: "Get Tickets",
-    image: "", // No image for this event
+    buttonLink: "/tickets/6",
+    image: "",
   },
   {
-    id: 3,
+    id: 7,
     title: "Birthday Party Package to the Chocolate Museum",
     date: "Available every day",
     location: "",
     tags: ["Activity", "Chocolate Workshop", "Choco Fun"],
     buttonText: "Get Tickets",
-    image: "path/to/chocolate-museum-image.jpg",
+    buttonLink: "/tickets/7",
+    image: noImageIcon,
   },
   {
-    id: 4,
+    id: 8,
     title: "BOARD GAMES ACTIVITIES FOR KIDS",
     date: "Sat, November 30, 2024",
     location: "+5 dates",
     tags: ["Activity"],
     buttonText: "Get Tickets",
-    image: "", // No image for this event
+    buttonLink: "/tickets/8",
+    image: "",
+  },
+  {
+    id: 9,
+    title: "BEACH CLEAN UP FOR FAMILY",
+    date: "Mon, November 13, 2023",
+    location: "Public Beach Beirut",
+    tags: ["Activity"],
+    buttonText: "Get Tickets",
+    buttonLink: "/tickets/9",
+    image: beachimage,
+  },
+  {
+    id: 10,
+    title: "Birthday Party Package - Beirut Cultural Tour",
+    date: "Available every day",
+    location: "",
+    tags: ["Activity", "Birthday in Beirut", "Cultural Tour"],
+    buttonText: "Get Tickets",
+    buttonLink: "/tickets/10",
+    image: "",
   },
 ];
 
 const EventsPage = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const filteredEvents = events.filter(
+    (event) =>
+      event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      event.tags.some((tag) =>
+        tag.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+  );
+
   return (
     <div className="events-page">
       {/* Hero Section */}
@@ -87,7 +129,18 @@ const EventsPage = () => {
         <h1>Welcome to Evently</h1>
         <p>Your backstage pass to the world of events!</p>
 
-        {/* Call to action button for scrolling to events */}
+        {/* Search Bar */}
+        <div className="search-container">
+          <input
+            type="text"
+            placeholder="Search events..."
+            className="search-input"
+            value={searchQuery}
+            onChange={handleSearchChange}
+          />
+        </div>
+
+        {/* Call to Action */}
         <button
           className="cta-button"
           onClick={() => {
@@ -101,28 +154,26 @@ const EventsPage = () => {
         </button>
       </div>
 
-      {/* Top-right buttons for login and sign-up */}
+      {/* Top Right Buttons */}
       <div className="top-right-buttons">
         <button className="cta-button">
-          <Link to="/sign-up" relative="path">
-            Sign up
-          </Link>
+          <Link to="/sign-up">Sign up</Link>
         </button>
         <button className="cta-button">
-          <Link to="/login" relative="path">
-            Login
-          </Link>
+          <Link to="/login">Login</Link>
         </button>
       </div>
 
-      {/* Upcoming Events */}
-      <h1 id="upcoming-events" className="events-title">Upcoming Events</h1>
+      {/* Upcoming Events Section */}
+      <h1 id="upcoming-events" className="events-title">
+        Upcoming Events
+      </h1>
       <div className="events-container">
-        {events.map((event) => (
+        {filteredEvents.map((event) => (
           <div className="event-card" key={event.id}>
             <div className="image-container">
               <img
-                src={event.image || noImageIcon} // Use event image or fallback to placeholder
+                src={event.image || noImageIcon}
                 alt={event.title}
                 className="event-image"
               />
@@ -135,12 +186,19 @@ const EventsPage = () => {
               )}
               <div className="event-tags">
                 {event.tags.map((tag, index) => (
-                  <span className="event-tag" key={index}>
+                  <span className="event-tag" key={`${event.id}-${index}`}>
                     {tag}
                   </span>
                 ))}
               </div>
-              <button className="event-button">{event.buttonText}</button>
+              <button
+                className="event-button"
+                onClick={() => {
+                  window.location.href = event.buttonLink || "#";
+                }}
+              >
+                {event.buttonText}
+              </button>
             </div>
           </div>
         ))}

@@ -6,6 +6,7 @@
   --highlight-color: #ff5722;
 }
 
+/* General Body Styles */
 body {
   font-family: Arial, sans-serif;
   margin: 0;
@@ -25,8 +26,6 @@ body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  position: relative; /* Added relative positioning */
-  animation: fadeIn 1.5s ease-in-out;
 }
 
 .hero-section h1 {
@@ -37,6 +36,33 @@ body {
 .hero-section p {
   font-size: 1.2rem;
   margin: 10px 0 30px;
+}
+
+/* Search Bar */
+.search-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.search-input {
+  padding: 10px 20px;
+  font-size: 1rem;
+  border-radius: 25px;
+  border: 1px solid var(--medium-gray);
+  outline: none;
+  width: 300px;
+}
+
+.search-input:focus {
+  border-color: var(--highlight-color);
+}
+
+/* Top Right Buttons */
+.top-right-buttons {
+  position: absolute;
+  top: 20px;
+  right: 20px;
 }
 
 .cta-button {
@@ -55,53 +81,24 @@ body {
   transform: scale(1.1);
 }
 
-/* Button container inside hero section */
-.hero-buttons {
-  display: flex;
-  gap: 15px;
-  justify-content: center;
-  margin-top: 20px;
+.cta-button a {
+  color: white;
+  text-decoration: none;
 }
 
-/* Top-right corner for sign-up and login buttons */
-.top-right-buttons {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  display: flex;
-  gap: 15px;
-}
-.top-right-buttons .cta-button a {
-  color: var(--light-gray);
-  text-decoration: none; /* Remove the underline */
-}
-
-
-
-/* General Section Spacing */
-.events-page > * {
-  margin-bottom: 40px;
-}
-
+/* Upcoming Events */
 .events-title {
   text-align: center;
-  font-size: 2rem;
-  margin-bottom: 20px;
-  color: var(--primary-color);
+  font-size: 2.5rem;
+  margin: 20px 0;
 }
 
 .events-container {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
-  justify-content: center;
-  margin-top: 30px;
-}
-
-@media (max-width: 1200px) {
-  .events-container {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  padding: 20px;
+  padding-top: 0;
 }
 
 @media (max-width: 768px) {
@@ -116,26 +113,55 @@ body {
   }
 }
 
+/* Event Cards */
 .event-card {
-  background-color: #fff;
+  background-color: white;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   transition: transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%; 
 }
 
 .event-card:hover {
   transform: translateY(-5px);
 }
 
+/* Event Card Images */
+.image-container {
+  width: 100%;
+  height: 180px; 
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--light-gray);
+}
+
+.event-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Event Card Content */
 .event-details {
   padding: 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex-grow: 1;
 }
 
 .event-title {
   font-size: 1.2rem;
   margin: 0;
   color: var(--primary-color);
+  text-align: center;
+  min-height: 3rem;
 }
 
 .event-date,
@@ -143,10 +169,15 @@ body {
   font-size: 0.9rem;
   margin: 5px 0;
   color: var(--medium-gray);
+  text-align: center;
 }
 
 .event-tags {
   margin: 10px 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center; 
+  gap: 5px; 
 }
 
 .event-tag {
@@ -156,42 +187,25 @@ body {
   font-size: 0.8rem;
   padding: 5px 10px;
   border-radius: 20px;
-  margin-right: 5px;
+  text-align: center;
 }
 
+/* Event Card Button */
 .event-button {
-  display: inline-block;
   background-color: var(--highlight-color);
-  color: #fff;
+  color: white;
   border: none;
   padding: 10px 20px;
   border-radius: 5px;
   cursor: pointer;
   font-size: 0.9rem;
   margin-top: 10px;
-  transition: background-color 0.3s ease;
+  text-align: center;
+  align-self: center; 
 }
 
 .event-button:hover {
   background-color: #e64a19;
-}
-
-.image-container {
-  width: 100%;
-  height: 20vw;
-  max-height: 180px;
-  overflow: hidden;
-  background-color: var(--light-gray);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.event-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
 }
 
 /* Footer */
@@ -201,18 +215,4 @@ body {
   text-align: center;
   padding: 20px;
   font-size: 0.9rem;
-}
-
-.footer p {
-  margin: 0;
-}
-
-/* Keyframes */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
 }
