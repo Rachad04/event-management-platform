@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import "./EventsPage.css";
 import { Link } from "react-router-dom";
 import noImageIcon from "./Images/no-image.png";
@@ -122,6 +122,15 @@ const EventsPage = () => {
       )
   );
 
+  const upcomingEventsRef = useRef(null);
+
+  const handleScrollToSection = () => {
+    if (upcomingEventsRef.current) {
+      upcomingEventsRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+
   return (
     <div className="events-page">
       {/* Hero Section */}
@@ -141,17 +150,10 @@ const EventsPage = () => {
         </div>
 
         {/* Call to Action */}
-        <button
-          className="cta-button"
-          onClick={() => {
-            const section = document.getElementById("upcoming-events");
-            if (section) {
-              section.scrollIntoView({ behavior: "smooth" });
-            }
-          }}
-        >
-          View Events
-        </button>
+        <button className="cta-button" onClick={handleScrollToSection}>
+        View Events
+      </button>
+
       </div>
 
       {/* Top Right Buttons */}
@@ -165,6 +167,9 @@ const EventsPage = () => {
       </div>
 
       {/* Upcoming Events Section */}
+      <section id="upcoming-events" ref={upcomingEventsRef}>
+
+
       <h1 id="upcoming-events" className="events-title">
         Upcoming Events
       </h1>
@@ -203,7 +208,7 @@ const EventsPage = () => {
           </div>
         ))}
       </div>
-
+        </section>
       {/* Footer */}
       <footer className="footer">
         <p>&copy; 2024 Evently. All Rights Reserved.</p>
