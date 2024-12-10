@@ -21,11 +21,11 @@ function App() {
         <Route path="/tickets/:eventId" element={<TicketingPage />} />
 
         <Route
-          path="/users/user/:user_id" // Correct dynamic parameter path
+          path="/users/user/:user_id"
           element={
-            // <ProtectedRoute>
-            <UserPage />
-            // </ProtectedRoute>
+            <ProtectedRoute>
+              <UserPage />
+            </ProtectedRoute>
           }
         />
       </Routes>

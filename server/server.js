@@ -27,10 +27,28 @@ const pool = new Pool({
 // Helper function to generate JWT
 const generateToken = (user) => {
   return jwt.sign(
-    { id: user.id, username: user.username, userType: user.userType }, // Include username
+    {
+      id: user.user_id || user.id, // Use user_id or id, whichever is available
+      username: user.username,
+      userType: user.user_type || user.userType,
+    },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN }
   );
+};
+
+// Middleware to authenticate token
+const authenticateToken = (req, res, next) => {
+  const token = req.header("Authorization")?.split(" ")[1];
+  if (!token) return res.status(401).json({ message: "Access Denied" });
+
+  try {
+    const verified = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = verified; // Attach user data to request object
+    next();
+  } catch (err) {
+    res.status(400).json({ message: "Invalid Token" });
+  }
 };
 
 // Utility function to extract username from email
@@ -52,6 +70,23 @@ const userTypeIsValid = (type) => {
   return false;
 };
 
+// GET
+app.get("/api/users/:id", authenticateToken, async (req, res) => {
+  if (req.user.id !== parseInt(req.params.id)) {
+    return res.status(403).json({ message: "Unauthorized access" });
+  }
+
+  const user = await pool.query("SELECT * FROM users WHERE user_id = $1", [
+    req.params.id,
+  ]);
+
+  if (!user.rows[0]) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  res.json(user.rows[0]);
+});
+
 // Sign Up Route
 app.post(
   "/api/signup",
@@ -60,42 +95,33 @@ app.post(
     body("password").isLength({ min: 8 }),
   ],
   async (req, res) => {
-    console.log("got request");
-
     // Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    console.log("validated input");
-
     // Extract data
     const { email, userType, password, password2 } = req.body;
 
-    console.log("extracted data");
-
     try {
-      if (password != password2) {
+      // Perform all validations before database operations
+      if (password !== password2) {
         return res.status(400).json({ message: "Passwords do not match" });
       }
 
       if (!userTypeIsValid(userType)) {
-        return res
-          .status(401)
-          .json({ message: "The user type isn't a valid type" });
+        return res.status(401).json({ message: "Invalid user type" });
       }
-      console.log("validated data");
 
-      // Check if user exists
+      // Check if user exists - use SELECT FOR UPDATE to prevent race conditions
       const userExists = await pool.query(
-        "SELECT * FROM users WHERE email_address = $1",
+        "SELECT * FROM users WHERE email_address = $1 FOR UPDATE",
         [email]
       );
-      console.log("checked existance");
 
       if (userExists.rows.length > 0) {
-        return res.status(402).json({ message: "User already exists" });
+        return res.status(409).json({ message: "User already exists" });
       }
 
       // Generate username
@@ -104,23 +130,36 @@ app.post(
       // Hash password
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
-      console.log("hashed password");
 
-      // Insert user into database
-      const newUser = await pool.query(
-        "INSERT INTO users (email_address, username, password, user_type) VALUES ($1, $2, $3, $4) RETURNING *",
-        [email, userName, hashedPassword, userType]
-      );
-      console.log("inserted new user");
+      // Insert user into database within a transaction
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const newUser = await client.query(
+          "INSERT INTO users (email_address, username, password, user_type) VALUES ($1, $2, $3, $4) RETURNING *",
+          [email, userName, hashedPassword, userType]
+        );
+        await client.query("COMMIT");
 
-      // Generate token
-      const token = generateToken(newUser.rows[0]);
-      console.log("generated token");
+        // Generate token
+        const token = generateToken(newUser.rows[0]);
 
-      res.status(201).json({ token });
+        res.status(201).json({
+          token,
+          user: {
+            id: newUser.rows[0].user_id,
+            username: newUser.rows[0].username,
+          },
+        });
+      } catch (insertError) {
+        await client.query("ROLLBACK");
+        throw insertError;
+      } finally {
+        client.release();
+      }
     } catch (error) {
       console.error(error.message);
-      res.status(500).send("Server error");
+      res.status(500).json({ message: "Server error", error: error.message });
     }
   }
 );
@@ -170,23 +209,6 @@ app.post(
   }
 );
 
-// GET
-app.get("/api/users/:user_id", async (req, res) => {
-  const userId = req.params.user_id; // Expecting `user123` in the URL
-  try {
-    const user = await pool.query("SELECT * FROM users WHERE user_id = $1", [
-      userId,
-    ]);
-    if (user.rows.length === 0) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    res.json(user.rows[0]);
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
 // Protected Route Example
 app.get("/api/user", authenticateToken, (req, res) => {
   console.log("Authenticated user:", req.user); // Debugging line
@@ -223,7 +245,7 @@ app.put("/api/users/:user_id", authenticateToken, async (req, res) => {
       `UPDATE users 
        SET first_name = COALESCE($1, first_name),
            last_name = COALESCE($2, last_name),
-           phone = COALESCE($3, phone),
+           phone_number = COALESCE($3, phone_number),
            location = COALESCE($4, location),
            birthday = COALESCE($5, birthday),
            gender = COALESCE($6, gender)
@@ -242,27 +264,6 @@ app.put("/api/users/:user_id", authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
-// Middleware to authenticate token
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
-
-  if (!token) {
-    return res.sendStatus(401); // Unauthorized if token is missing
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      console.error("JWT Verification Failed:", err);
-      return res.sendStatus(403); // Forbidden if token is invalid
-    }
-
-    console.log("Decoded JWT user:", user); // Debugging line to see decoded token
-    req.user = user; // Attach user info to the request object
-    next(); // Proceed to the next middleware or route handler
-  });
-}
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);

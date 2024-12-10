@@ -35,7 +35,6 @@ export const AuthProvider = ({ children }) => {
   }, [auth.token]); // Only run if `auth.token` changes
 
   // Login function: store token and extract user ID
-  // Login function: store token and extract user ID
   const login = (token) => {
     localStorage.setItem("token", token); // Store token in localStorage
     try {

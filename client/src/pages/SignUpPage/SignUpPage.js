@@ -8,15 +8,6 @@ function SignUpPage() {
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const handleSignUp = () => {
-    const userId = localStorage.getItem("userId");
-    if (userId) {
-      navigate(`/users/user:${userId}`);
-    } else {
-      console.error("User ID is undefined");
-    }
-  };
-
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -40,8 +31,14 @@ function SignUpPage() {
         "http://localhost:5000/api/signup",
         formData
       );
-      login(res.data.token);
-      handleSignUp();
+
+      login(res.data.token); // Persist token
+      localStorage.setItem("userId", res.data.user.id); // Ensure user ID is stored
+
+      // Wait briefly to ensure token is available
+      setTimeout(() => {
+        navigate(`/users/user/${res.data.user.id}`);
+      }, 100); // Adjust delay if needed
     } catch (error) {
       if (error.response && error.response.data) {
         setErrors(
