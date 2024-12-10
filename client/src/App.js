@@ -8,6 +8,7 @@ import LoginPage from "./pages/LoginPage/LoginPage";
 import SignUpPage from "./pages/SignUpPage/SignUpPage";
 import EventsPage  from "./pages/EventsPage/EventsPage";
 import TicketingPage from "./pages/TicketingPage/TicketingPage";
+import ManagerPage from "./pages/ManagerPage/ManagerPage";
 import ProtectedRoute from "./Components/ProtectedRoute";
 
 function App() {
@@ -19,7 +20,7 @@ function App() {
         <Route path="/sign-up" element={<SignUpPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/tickets/:eventId" element={<TicketingPage />} />
-
+        <Route path="/manager" element={<ManagerPage />} />
         <Route
           path="/users/user/:user_id"
           element={
