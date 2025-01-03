@@ -17,23 +17,25 @@ axiosInstance.interceptors.request.use((config) => {
 });
 
 const ManagerPage = () => {
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isCompany, setIsCompany] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [eventData, setEventData] = useState({
     name: "",
     date: "",
+    time: "",
     location: "",
+    price: "",
   });
 
-  // Check if the user is an admin
+  // Check if the user has the "Company" role
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const response = await axiosInstance.get("/api/users/me");
-        if (response.data.role === "admin") {
-          setIsAdmin(true);
+        if (response.data.role === "Company") {
+          setIsCompany(true);
         }
       } catch (err) {
         setError("Failed to load user data.");
@@ -57,9 +59,9 @@ const ManagerPage = () => {
   const handleCreateEvent = async (e) => {
     e.preventDefault();
     try {
-      const response = await axiosInstance.post("/api/events", eventData);
+      await axiosInstance.post("/api/events", eventData);
       setSuccess("Event created successfully!");
-      setEventData({ name: "", date: "", location: "" });
+      setEventData({ name: "", date: "", time: "", location: "", price: "" });
     } catch (err) {
       setError("Failed to create event.");
     }
@@ -71,12 +73,12 @@ const ManagerPage = () => {
     <div className="page-container">
       <div className="content-wrapper">
         <div className="details-card">
-          <h2>Manage Events</h2>
+          <h2>Event Management</h2>
 
           {error && <div className="error-message">{error}</div>}
           {success && <div className="success-message">{success}</div>}
 
-          {isAdmin ? (
+          {isCompany ? (
             <form onSubmit={handleCreateEvent} className="event-form">
               <div className="form-group">
                 <label htmlFor="name">Event Name:</label>
@@ -86,6 +88,7 @@ const ManagerPage = () => {
                   value={eventData.name}
                   onChange={handleInputChange}
                   className="form-input"
+                  placeholder="Enter event name"
                 />
               </div>
               <div className="form-group">
@@ -99,6 +102,16 @@ const ManagerPage = () => {
                 />
               </div>
               <div className="form-group">
+                <label htmlFor="time">Event Time:</label>
+                <input
+                  type="time"
+                  name="time"
+                  value={eventData.time}
+                  onChange={handleInputChange}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
                 <label htmlFor="location">Event Location:</label>
                 <input
                   type="text"
@@ -106,6 +119,18 @@ const ManagerPage = () => {
                   value={eventData.location}
                   onChange={handleInputChange}
                   className="form-input"
+                  placeholder="Enter event location"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="price">Event Price:</label>
+                <input
+                  type="number"
+                  name="price"
+                  value={eventData.price}
+                  onChange={handleInputChange}
+                  className="form-input"
+                  placeholder="Enter ticket price"
                 />
               </div>
               <div className="button-group">
