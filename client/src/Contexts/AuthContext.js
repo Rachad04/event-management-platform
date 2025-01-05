@@ -1,64 +1,77 @@
+// AuthContext.js
 import React, { createContext, useState, useEffect } from "react";
 import axios from "axios";
 
-// Create Context
 export const AuthContext = createContext();
 
-// Provider Component
 export const AuthProvider = ({ children }) => {
   const [auth, setAuth] = useState({
     token: localStorage.getItem("token"),
-    user: null, // Initially null, will be set after login
+    user: null,
+    loading: true, // Add loading state
   });
 
-  // Fetch user data if a valid token exists
   useEffect(() => {
-    if (auth.token) {
-      // If there's a token, fetch user data
-      axios
-        .get("http://localhost:5000/api/user", {
-          headers: { Authorization: `Bearer ${auth.token}` },
-        })
-        .then((response) => {
-          console.log("User data fetched:", response.data); // Debugging line to see response
-          setAuth((prev) => ({
-            ...prev,
-            user: { ...prev.user, username: response.data.message }, // Example of setting user
-          }));
-        })
-        .catch((error) => {
+    const initializeAuth = async () => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        try {
+          const response = await axios.get("http://localhost:5000/api/user", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setAuth({
+            token,
+            user: response.data,
+            loading: false,
+          });
+        } catch (error) {
           console.error("Error fetching user data:", error);
-          setAuth({ token: null, user: null });
-          localStorage.removeItem("token"); // If there's an error, remove token
-        });
-    }
-  }, [auth.token]); // Only run if `auth.token` changes
+          localStorage.removeItem("token");
+          localStorage.removeItem("userId");
+          setAuth({ token: null, user: null, loading: false });
+        }
+      } else {
+        setAuth((prev) => ({ ...prev, loading: false }));
+      }
+    };
 
-  // Login function: store token and extract user ID
-  const login = (token) => {
-    localStorage.setItem("token", token); // Store token in localStorage
+    initializeAuth();
+  }, []);
+
+  const login = async (token) => {
     try {
-      const payload = JSON.parse(atob(token.split(".")[1])); // Decode the JWT payload
-      console.log("Decoded JWT Payload:", payload); // Debugging line to ensure payload is correct
+      localStorage.setItem("token", token);
 
-      const userId = payload.id; // Extract userId from the decoded payload
-      const username = payload.username; // You might also want to extract username or other details
+      // Decode token to get initial user data
+      const payload = JSON.parse(atob(token.split(".")[1]));
 
-      setAuth((prev) => ({
-        ...prev,
-        user: { ...prev.user, id: userId, username: username }, // Update user info in context
-      }));
+      // Fetch full user data
+      const response = await axios.get("http://localhost:5000/api/user", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-      localStorage.setItem("userId", userId); // Store userId in localStorage as well
+      const userData = {
+        ...response.data,
+        id: payload.id || response.data.id,
+      };
+
+      setAuth({
+        token,
+        user: userData,
+        loading: false,
+      });
+
+      return userData; // Return user data for immediate use
     } catch (error) {
-      console.error("Error decoding token:", error);
+      console.error("Error in login:", error);
+      throw error;
     }
   };
 
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("userId");
-    setAuth({ token: null, user: null });
+    setAuth({ token: null, user: null, loading: false });
   };
 
   return (
