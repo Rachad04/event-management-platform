@@ -19,7 +19,6 @@ function App() {
         <Route path="/sign-up" element={<SignUpPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/tickets/:eventId" element={<TicketingPage />} />
-
         <Route
           path="/users/user/:user_id"
           element={
