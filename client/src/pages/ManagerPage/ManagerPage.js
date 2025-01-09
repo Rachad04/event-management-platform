@@ -32,7 +32,10 @@ const ManagerPage = () => {
     const fetchUserData = async () => {
       try {
         const response = await axiosInstance.get("/api/users/me");
-        if (response.data.role === "admin") {
+        if (
+          response.data.user_type === "manager" ||
+          response.data.isAdmin === true
+        ) {
           setIsAdmin(true);
         }
       } catch (err) {
