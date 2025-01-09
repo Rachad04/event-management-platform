@@ -6,14 +6,16 @@ import HomePage from "./pages/HomePage/HomePage";
 import UserPage from "./pages/UserPage/UserPage";
 import LoginPage from "./pages/LoginPage/LoginPage";
 import SignUpPage from "./pages/SignUpPage/SignUpPage";
-import EventsPage  from "./pages/EventsPage/EventsPage";
+import EventsPage from "./pages/EventsPage/EventsPage";
 import TicketingPage from "./pages/TicketingPage/TicketingPage";
 import ManagerPage from "./pages/ManagerPage/ManagerPage";
 import ProtectedRoute from "./Components/ProtectedRoute";
+import NavigationBar from "./Components/NavigationBar/NavigationBar";
 
 function App() {
   return (
     <BrowserRouter>
+      <NavigationBar />
       <Routes>
         <Route exact path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />

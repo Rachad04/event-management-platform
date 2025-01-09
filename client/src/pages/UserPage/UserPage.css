@@ -1,61 +1,72 @@
 .page-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  background-color: var(--secondary);
+  width: 100vw;
+  height: calc(100vh - 8vh); /* Adjust height to account for the nav bar */
+  margin-top: 8vh; /* Push the container below the nav bar */
+  background-image: url("/images/eventscom_cover.jpeg");
   color: var(--primary);
+  position: absolute;
+  overflow: hidden;
 }
 
 .content-wrapper {
   display: flex;
-  gap: 4rem;
+  gap: 4rem; /* Adjust gap to scale appropriately */
   width: 100%;
-  max-width: 1600px;
-  height: 75vh;
+  max-width: 1200px; /* Adjust max-width for better fit */
+  height: 100%; /* Use full height of the adjusted container */
+  position: relative;
+  justify-content: center;
+  align-items: center;
 }
 
 .profile-card {
   background-color: var(--neutral-1);
   border-radius: 0.5rem;
-  padding: 2rem;
-  width: 22vw;
-  height: 100% - 2rem;
+  padding: 2rem; /* Adjust padding for balance */
+  width: 16vw; /* Adjust width proportionally */
+  height: calc(100% - 5rem);
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .profile-header {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 1.5rem; /* Reduce gap slightly */
   flex: 1;
 }
 
 .profile-picture {
-  width: 12rem;
-  height: 12rem;
+  width: 10rem; /* Reduce size proportionally */
+  height: 10rem;
   background-color: var(--neutral-2);
   border-radius: 50%;
-  margin-bottom: 2.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2rem;
+  color: var(--primary);
+  text-transform: uppercase;
 }
 
 .profile-header h2 {
-  font-size: 1.8rem;
+  font-size: 1.6rem; /* Reduce font size */
   color: var(--primary);
-  margin-bottom: 2.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .profile-info {
   border-top: 1px solid var(--neutral-2);
-  padding-top: 2rem;
+  padding-top: 1.5rem;
   text-align: left;
   flex: 1;
 }
 
 .profile-info p {
-  margin: 1.25rem 0;
-  font-size: 1.2rem;
+  margin: 1rem 0;
+  font-size: 1rem;
   color: var(--primary);
 }
 
@@ -63,17 +74,18 @@
 .details-card {
   background-color: var(--neutral-1);
   border-radius: 0.5rem;
-  width: 65vw;
-  height: 100%;
+  width: 48vw; /* Adjust width for proportional scaling */
+  height: calc(100% - 5rem);
   display: flex;
   flex-direction: column;
+  padding: 2rem;
 }
 
 .tabs {
   display: flex;
   justify-content: center;
-  gap: 4rem;
-  padding: 1.5rem 2rem;
+  gap: 3rem; /* Adjust gap for balance */
+  padding: 1rem;
   border-bottom: 1px solid var(--neutral-2);
 }
 
@@ -84,7 +96,7 @@
   color: var(--primary);
   cursor: pointer;
   position: relative;
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: 500;
 }
 
@@ -95,7 +107,7 @@
 .tab.active::after {
   content: "";
   position: absolute;
-  bottom: -1.5rem;
+  bottom: -1rem;
   left: 0;
   right: 0;
   height: 2px;
@@ -103,16 +115,17 @@
 }
 
 .details-content {
-  padding: 3rem;
+  padding: 2rem;
   position: relative;
   flex: 1;
+  overflow-y: auto;
 }
 
 .detail-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 2.5rem;
-  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
 }
 
 .detail-label {
@@ -125,9 +138,9 @@
 
 .modify-button {
   position: absolute;
-  bottom: 2rem;
-  right: 2rem;
-  padding: 0.75rem 1.5rem;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  padding: 0.5rem 1rem;
   background-color: var(--urgent);
   color: white;
   border: none;
@@ -156,6 +169,7 @@
   padding: 0.5rem;
   border: 1px solid #ccc;
   border-radius: 4px;
+  font-size: 1rem;
 }
 
 .button-group {
@@ -191,4 +205,28 @@
 .success-message {
   color: #4caf50;
   margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .content-wrapper {
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .profile-card,
+  .details-card {
+    width: 90%;
+    height: auto;
+  }
+
+  .tabs {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .tab {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.9rem;
+  }
 }

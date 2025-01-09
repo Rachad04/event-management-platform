@@ -45,8 +45,12 @@ const authenticateToken = (req, res, next) => {
   try {
     const verified = jwt.verify(token, process.env.JWT_SECRET);
     req.user = verified; // Attach user data to request object
+    if (!req.user.id) {
+      throw new Error("Invalid token: Missing user ID");
+    }
     next();
   } catch (err) {
+    console.error("Token verification failed:", err.message);
     res.status(400).json({ message: "Invalid Token" });
   }
 };
@@ -72,19 +76,28 @@ const userTypeIsValid = (type) => {
 
 // GET
 app.get("/api/users/:id", authenticateToken, async (req, res) => {
-  if (req.user.id !== parseInt(req.params.id)) {
-    return res.status(403).json({ message: "Unauthorized access" });
+  try {
+    if (req.user.id !== parseInt(req.params.id)) {
+      return res.status(403).json({ message: "Unauthorized access" });
+    }
+
+    const userQuery = `
+      SELECT user_id, first_name, last_name, phone_number AS phone, 
+             location, birthday, gender, email_address AS email 
+      FROM users 
+      WHERE user_id = $1
+    `;
+    const user = await pool.query(userQuery, [req.params.id]);
+
+    if (user.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(user.rows[0]);
+  } catch (error) {
+    console.error("Error fetching user data:", error.message);
+    res.status(500).json({ message: "Server error" });
   }
-
-  const user = await pool.query("SELECT * FROM users WHERE user_id = $1", [
-    req.params.id,
-  ]);
-
-  if (!user.rows[0]) {
-    return res.status(404).json({ message: "User not found" });
-  }
-
-  res.json(user.rows[0]);
 });
 
 // Sign Up Route
@@ -229,38 +242,46 @@ app.get("/api/user", authenticateToken, (req, res) => {
 // Add this endpoint to your existing Express server code
 
 app.put("/api/users/:user_id", authenticateToken, async (req, res) => {
-  const userId = req.params.user_id;
+  const userId = parseInt(req.params.user_id);
   const { firstName, lastName, phone, location, birthday, gender } = req.body;
 
   try {
-    // First verify that the authenticated user matches the user_id
-    if (req.user.id !== parseInt(userId)) {
+    if (req.user.id !== userId) {
       return res
         .status(403)
         .json({ message: "Not authorized to modify this user's details" });
     }
 
-    // Update user details
-    const updatedUser = await pool.query(
-      `UPDATE users 
-       SET first_name = COALESCE($1, first_name),
-           last_name = COALESCE($2, last_name),
-           phone_number = COALESCE($3, phone_number),
-           location = COALESCE($4, location),
-           birthday = COALESCE($5, birthday),
-           gender = COALESCE($6, gender)
-       WHERE user_id = $7
-       RETURNING *`,
-      [firstName, lastName, phone, location, birthday, gender, userId]
-    );
+    const updateQuery = `
+      UPDATE users 
+      SET first_name = COALESCE($1, first_name),
+          last_name = COALESCE($2, last_name),
+          phone_number = COALESCE($3, phone_number),
+          location = COALESCE($4, location),
+          birthday = COALESCE($5, birthday),
+          gender = COALESCE($6, gender)
+      WHERE user_id = $7
+      RETURNING user_id, first_name, last_name, phone_number AS phone, 
+                location, birthday, gender, email_address AS email
+    `;
+    const updatedUser = await pool.query(updateQuery, [
+      firstName || null,
+      lastName || null,
+      phone || null,
+      location || null,
+      birthday || null,
+      gender || null,
+      userId,
+    ]);
 
     if (updatedUser.rows.length === 0) {
       return res.status(404).json({ message: "User not found" });
     }
 
+    console.log("Updated user details:", updatedUser.rows[0]); // Debugging line
     res.json(updatedUser.rows[0]);
   } catch (error) {
-    console.error("Error updating user:", error);
+    console.error("Error updating user:", error.message);
     res.status(500).json({ message: "Server error" });
   }
 });

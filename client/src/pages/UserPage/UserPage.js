@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import "./UserPage.css";
@@ -22,7 +22,7 @@ const UserPage = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState(null); // Change to null initially
+  const [formData, setFormData] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -47,6 +47,7 @@ const UserPage = () => {
         }
 
         const response = await axiosInstance.get(`/api/users/${user_id}`);
+        console.log("Received user data:", response.data);
         setUserData(response.data);
       } catch (err) {
         setError(err.response?.data?.message || "Failed to load user data");
@@ -61,7 +62,14 @@ const UserPage = () => {
   // When userData changes and we want to start editing, set formData
   useEffect(() => {
     if (isEditing && userData) {
-      setFormData({ ...userData });
+      const formattedData = {
+        ...userData,
+        firstName:
+          userData.firstName || userData.first_name || userData.firstname,
+        lastName: userData.lastName || userData.last_name || userData.lastname,
+      };
+      console.log("Setting form data:", formattedData);
+      setFormData(formattedData);
     }
   }, [isEditing, userData]);
 
@@ -72,14 +80,25 @@ const UserPage = () => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("Submitting form data:", formData);
+    setError(""); // Clear any previous errors
+    setSuccess(""); // Clear any previous success messages
+
     try {
       const response = await axiosInstance.put(
         `/api/users/${user_id}`,
         formData
       );
+
+      // Update the `userData` state with the latest changes
       setUserData(response.data);
-      setSuccess("Profile updated successfully!");
+
+      // Reset formData and editing state
+      setFormData(null);
       setIsEditing(false);
+
+      // Display success message
+      setSuccess("Profile updated successfully!");
     } catch (error) {
       setError(error.response?.data?.message || "Failed to update profile");
     }
@@ -235,7 +254,7 @@ const UserPage = () => {
                 <button
                   className="modify-button"
                   onClick={() => {
-                    setFormData(userData);
+                    setFormData({ ...userData }); // Populate formData with userData
                     setIsEditing(true);
                   }}
                 >
