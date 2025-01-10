@@ -289,3 +289,167 @@ app.put("/api/users/:user_id", authenticateToken, async (req, res) => {
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
+
+// apis for event dashboard page
+// Add these endpoints to your existing server.js
+
+// Get current user type
+app.get("/api/user", authenticateToken, async (req, res) => {
+  try {
+    const userQuery = `
+      SELECT user_id, username, user_type 
+      FROM users 
+      WHERE user_id = $1
+    `;
+    const user = await pool.query(userQuery, [req.user.id]);
+
+    if (user.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({
+      id: user.rows[0].user_id,
+      username: user.rows[0].username,
+      userType: user.rows[0].user_type,
+    });
+  } catch (error) {
+    console.error("Error fetching user data:", error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get all companies (for admin)
+app.get("/api/companies", authenticateToken, async (req, res) => {
+  try {
+    // Check if user is admin
+    const userTypeQuery = `
+      SELECT user_type 
+      FROM users 
+      WHERE user_id = $1
+    `;
+    const userType = await pool.query(userTypeQuery, [req.user.id]);
+
+    if (userType.rows[0].user_type !== "admin") {
+      return res.status(403).json({ message: "Access denied: Admin only" });
+    }
+
+    const companiesQuery = `
+      SELECT managing_company_id, company_name
+      FROM managing_company
+      ORDER BY company_name
+    `;
+    const companies = await pool.query(companiesQuery);
+
+    res.json(companies.rows);
+  } catch (error) {
+    console.error("Error fetching companies:", error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get companies managed by current user
+app.get("/api/companies/managed", authenticateToken, async (req, res) => {
+  try {
+    const managedCompaniesQuery = `
+      SELECT DISTINCT mc.managing_company_id, mc.company_name
+      FROM managing_company mc
+      WHERE mc.representative_manager_id = $1 
+      OR EXISTS (
+        SELECT 1 
+        FROM users 
+        WHERE user_id = $1 
+        AND user_type = 'admin'
+      )
+      ORDER BY mc.company_name
+    `;
+    const companies = await pool.query(managedCompaniesQuery, [req.user.id]);
+
+    res.json(companies.rows);
+  } catch (error) {
+    console.error("Error fetching managed companies:", error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get events for a specific company
+app.get("/api/companies/:id/events", authenticateToken, async (req, res) => {
+  try {
+    // First check if user has access to this company
+    const accessCheckQuery = `
+      SELECT 1 
+      FROM managing_company mc
+      LEFT JOIN users u ON u.user_id = $1
+      WHERE mc.managing_company_id = $2
+      AND (
+        mc.representative_manager_id = $1 
+        OR u.user_type = 'admin'
+      )
+    `;
+    const accessCheck = await pool.query(accessCheckQuery, [
+      req.user.id,
+      req.params.id,
+    ]);
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const eventsQuery = `
+      SELECT e.event_id, e.event_type, e.date_of_event, e.location, 
+             e.capacity, e.description
+      FROM event e
+      WHERE e.managing_company_id = $1
+      ORDER BY e.date_of_event DESC
+    `;
+    const events = await pool.query(eventsQuery, [req.params.id]);
+
+    res.json(events.rows);
+  } catch (error) {
+    console.error("Error fetching company events:", error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get users who purchased tickets for an event
+app.get("/api/events/:id/users", authenticateToken, async (req, res) => {
+  try {
+    // First check if user has access to this event's company
+    const accessCheckQuery = `
+      SELECT 1 
+      FROM event e
+      JOIN managing_company mc ON mc.managing_company_id = e.managing_company_id
+      LEFT JOIN users u ON u.user_id = $1
+      WHERE e.event_id = $2
+      AND (
+        mc.representative_manager_id = $1 
+        OR u.user_type = 'admin'
+      )
+    `;
+    const accessCheck = await pool.query(accessCheckQuery, [
+      req.user.id,
+      req.params.id,
+    ]);
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const usersQuery = `
+      SELECT DISTINCT 
+        u.user_id,
+        u.first_name,
+        u.last_name,
+        u.email_address,
+        u.phone_number
+      FROM users u
+      JOIN purchases p ON p.user_id = u.user_id
+      WHERE p.event_id = $1
+    `;
+    const users = await pool.query(usersQuery, [req.params.id]);
+
+    res.json(users.rows);
+  } catch (error) {
+    console.error("Error fetching event users:", error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});

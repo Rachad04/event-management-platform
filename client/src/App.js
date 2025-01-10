@@ -11,6 +11,7 @@ import TicketingPage from "./pages/TicketingPage/TicketingPage";
 import ManagerPage from "./pages/ManagerPage/ManagerPage";
 import ProtectedRoute from "./Components/ProtectedRoute";
 import NavigationBar from "./Components/NavigationBar/NavigationBar";
+import EventDashboardPage from "./pages/EventDashboardPage/EventDashboardPage";
 
 function App() {
   return (
@@ -23,6 +24,14 @@ function App() {
         <Route path="/events" element={<EventsPage />} />
         <Route path="/tickets/:eventId" element={<TicketingPage />} />
         <Route path="/manager" element={<ManagerPage />} />
+        <Route
+          path="/company-users"
+          element={
+            <ProtectedRoute>
+              <EventDashboardPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/users/user/:user_id"
           element={

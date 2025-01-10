@@ -1,4 +1,3 @@
-// NavigationBar.js
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import "./NavigationBar.css";
@@ -6,13 +5,18 @@ import "./NavigationBar.css";
 function NavigationBar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [userType, setUserType] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userId = localStorage.getItem("userId");
+    const userType = localStorage.getItem("userType");
     setIsLoggedIn(!!token);
     setUserId(userId);
+    setUserType(userType);
   }, []);
+
+  const isManagerOrAdmin = userType === "admin" || userType === "company";
 
   return (
     <nav className="navbar">
@@ -26,9 +30,16 @@ function NavigationBar() {
         <li>
           <Link to="/events">Events</Link>
         </li>
-        <li>
-          <Link to="/manager">Manager</Link>
-        </li>
+        {isManagerOrAdmin && (
+          <>
+            <li>
+              <Link to="/manager">Manager</Link>
+            </li>
+            <li>
+              <Link to="/company-users">Company Users</Link>
+            </li>
+          </>
+        )}
         {isLoggedIn ? (
           <div>
             <Link to={`/users/user/${userId}`} className="user-icon">

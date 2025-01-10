@@ -31,7 +31,7 @@ const ManagerPage = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await axiosInstance.get("/api/users/me");
+        const response = await axiosInstance.get("/api/users/1");
         if (
           response.data.user_type === "manager" ||
           response.data.isAdmin === true
