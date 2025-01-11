@@ -41,11 +41,8 @@ export const AuthProvider = ({ children }) => {
   const login = async (token) => {
     try {
       localStorage.setItem("token", token);
-
-      // Decode token to get initial user data
       const payload = JSON.parse(atob(token.split(".")[1]));
 
-      // Fetch full user data
       const response = await axios.get("http://localhost:5000/api/user", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -53,7 +50,13 @@ export const AuthProvider = ({ children }) => {
       const userData = {
         ...response.data,
         id: payload.id || response.data.id,
+        userType: payload.userType,
+        isAdmin: payload.isAdmin,
       };
+
+      localStorage.setItem("userId", userData.id);
+      localStorage.setItem("userType", userData.userType);
+      localStorage.setItem("isAdmin", userData.isAdmin);
 
       setAuth({
         token,
@@ -61,7 +64,7 @@ export const AuthProvider = ({ children }) => {
         loading: false,
       });
 
-      return userData; // Return user data for immediate use
+      return userData;
     } catch (error) {
       console.error("Error in login:", error);
       throw error;

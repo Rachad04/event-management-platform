@@ -28,9 +28,10 @@ const pool = new Pool({
 const generateToken = (user) => {
   return jwt.sign(
     {
-      id: user.user_id || user.id, // Use user_id or id, whichever is available
+      id: user.user_id || user.id,
       username: user.username,
       userType: user.user_type || user.userType,
+      isAdmin: user.is_admin,
     },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN }
@@ -435,7 +436,6 @@ app.get("/api/companies/:id/events", authenticateToken, async (req, res) => {
 // Get users who purchased tickets for an event
 app.get("/api/events/:id/users", authenticateToken, async (req, res) => {
   try {
-    // First check if user has access to this event's company
     const accessCheckQuery = `
       SELECT 1 
       FROM event e
@@ -466,6 +466,7 @@ app.get("/api/events/:id/users", authenticateToken, async (req, res) => {
       FROM users u
       JOIN purchases p ON p.user_id = u.user_id
       WHERE p.event_id = $1
+      ORDER BY u.last_name, u.first_name
     `;
     const users = await pool.query(usersQuery, [req.params.id]);
 

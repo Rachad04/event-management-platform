@@ -49,7 +49,7 @@ const EventDashboardPage = () => {
   const [addUserError, setAddUserError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Fetch initial data only once
+  // Fetch initial data
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -57,7 +57,7 @@ const EventDashboardPage = () => {
         setUserType(userResponse.data.userType);
 
         const companiesResponse = await axiosInstance.get(
-          userResponse.data.is_admin
+          userResponse.data.userType === "admin"
             ? "/api/companies"
             : "/api/companies/managed"
         );
@@ -72,7 +72,7 @@ const EventDashboardPage = () => {
     fetchInitialData();
   }, []);
 
-  // Fetch company events only when company changes
+  // Fetch company events
   const fetchCompanyEvents = useCallback(async (companyId) => {
     if (!companyId) return;
 
@@ -89,65 +89,34 @@ const EventDashboardPage = () => {
     }
   }, []);
 
-  // Modified searchUsers function to fetch all users without search parameter
+  // Fetch event users
   const fetchEventUsers = useCallback(async () => {
     if (!selectedEvent) return;
 
     setLoading((prev) => ({ ...prev, users: true }));
     try {
       const response = await axiosInstance.get(
-        `/api/events/${selectedEvent}/users`,
-        {
-          params: {
-            page: currentPage,
-            limit: USERS_PER_PAGE,
-          },
-        }
+        `/api/events/${selectedEvent}/users`
       );
-
-      const fetchedUsers = response.data.users || [];
+      const fetchedUsers = response.data || [];
       setUsers(fetchedUsers);
       setFilteredUsers(fetchedUsers);
-      setTotalUsers(response.data.total || 0);
-      setTotalPages(Math.ceil(response.data.total / USERS_PER_PAGE));
+      setTotalUsers(fetchedUsers.length);
+      setTotalPages(Math.ceil(fetchedUsers.length / USERS_PER_PAGE));
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load users");
     } finally {
       setLoading((prev) => ({ ...prev, users: false }));
     }
-  }, [selectedEvent, currentPage]);
+  }, [selectedEvent]);
 
-  // Debounced user search
-  const searchUsers = useCallback(
-    async (searchTerm) => {
-      if (!selectedEvent) return;
+  useEffect(() => {
+    if (selectedEvent) {
+      fetchEventUsers();
+    }
+  }, [selectedEvent, fetchEventUsers]);
 
-      setLoading((prev) => ({ ...prev, users: true }));
-      try {
-        const response = await axiosInstance.get(
-          `/api/events/${selectedEvent}/users`,
-          {
-            params: {
-              page: currentPage,
-              limit: USERS_PER_PAGE,
-              search: searchTerm,
-            },
-          }
-        );
-
-        setUsers(response.data.users || []);
-        setTotalUsers(response.data.total || 0);
-        setTotalPages(Math.ceil(response.data.total / USERS_PER_PAGE));
-      } catch (err) {
-        setError(err.response?.data?.message || "Failed to load users");
-      } finally {
-        setLoading((prev) => ({ ...prev, users: false }));
-      }
-    },
-    [selectedEvent, currentPage]
-  );
-
-  // Handle attendee search with debounce
+  // Search users effect
   useEffect(() => {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
@@ -158,16 +127,17 @@ const EventDashboardPage = () => {
         const searchTerm = attendeeSearch.toLowerCase();
         const filtered = users.filter(
           (user) =>
-            user.first_name.toLowerCase().includes(searchTerm) ||
-            user.last_name.toLowerCase().includes(searchTerm) ||
-            user.email_address.toLowerCase().includes(searchTerm) ||
-            (user.phone_number && user.phone_number.includes(searchTerm))
+            user.first_name?.toLowerCase().includes(searchTerm) ||
+            user.last_name?.toLowerCase().includes(searchTerm) ||
+            user.email_address?.toLowerCase().includes(searchTerm) ||
+            user.phone_number?.toLowerCase().includes(searchTerm)
         );
         setFilteredUsers(filtered);
+        setCurrentPage(1);
       } else {
         setFilteredUsers(users);
       }
-    }, 500);
+    }, 300);
 
     return () => {
       if (searchTimeoutRef.current) {
@@ -176,13 +146,7 @@ const EventDashboardPage = () => {
     };
   }, [attendeeSearch, users]);
 
-  useEffect(() => {
-    if (selectedEvent) {
-      fetchEventUsers();
-    }
-  }, [selectedEvent, fetchEventUsers]);
-
-  // Optimized user search for adding new users
+  // Search new user
   const searchNewUser = useCallback(
     async (email) => {
       if (!email.trim()) {
@@ -230,6 +194,7 @@ const EventDashboardPage = () => {
     };
   }, [searchEmail, searchNewUser]);
 
+  // Event handlers
   const handleCompanyChange = (e) => {
     const companyId = e.target.value;
     setSelectedCompany(companyId);
@@ -253,19 +218,16 @@ const EventDashboardPage = () => {
         userId: user.user_id,
       });
 
-      // Optimistically update UI
       setUsers((prev) => [...prev, user]);
+      setFilteredUsers((prev) => [...prev, user]);
       setTotalUsers((prev) => prev + 1);
       setSearchEmail("");
       setSearchResults([]);
       setSuccessMessage("User added successfully");
 
-      // Clear success message after 3 seconds
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (err) {
       setAddUserError(err.response?.data?.message || "Failed to add user");
-      // Refresh the list to ensure consistency
-      searchUsers(attendeeSearch);
     }
   };
 
@@ -275,37 +237,34 @@ const EventDashboardPage = () => {
         `/api/events/${selectedEvent}/users/${userId}`
       );
 
-      // Optimistically update UI
       setUsers((prev) => prev.filter((user) => user.user_id !== userId));
+      setFilteredUsers((prev) =>
+        prev.filter((user) => user.user_id !== userId)
+      );
       setTotalUsers((prev) => prev - 1);
       setSuccessMessage("User removed successfully");
 
-      // Clear success message after 3 seconds
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to remove user");
-      // Refresh the list to ensure consistency
-      searchUsers(attendeeSearch);
     }
   };
 
+  // UI Components
   const MessageAlert = ({ message, type }) => (
     <div className={`message-alert ${type}`}>{message}</div>
   );
 
-  // Update the pagination calculation based on filtered results
-  const displayedUsers = filteredUsers;
-  const displayedTotalUsers = filteredUsers.length;
-  const displayedTotalPages = Math.ceil(displayedTotalUsers / USERS_PER_PAGE);
+  // Pagination calculations
   const startIndex = (currentPage - 1) * USERS_PER_PAGE;
-  const endIndex = Math.min(startIndex + USERS_PER_PAGE, displayedTotalUsers);
-  const currentPageUsers = displayedUsers.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + USERS_PER_PAGE, filteredUsers.length);
+  const currentPageUsers = filteredUsers.slice(startIndex, endIndex);
 
   const PaginationControls = () => (
     <div className="pagination-controls">
       <div className="pagination-info">
         <span>
-          Showing {startIndex + 1} to {endIndex} of {displayedTotalUsers} users
+          Showing {startIndex + 1} to {endIndex} of {filteredUsers.length} users
         </span>
       </div>
       <div className="pagination-buttons">
@@ -317,11 +276,14 @@ const EventDashboardPage = () => {
           <ChevronLeft size={20} />
         </button>
         <span className="pagination-page-info">
-          Page {currentPage} of {displayedTotalPages}
+          Page {currentPage} of{" "}
+          {Math.ceil(filteredUsers.length / USERS_PER_PAGE)}
         </span>
         <button
           onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === displayedTotalPages}
+          disabled={
+            currentPage === Math.ceil(filteredUsers.length / USERS_PER_PAGE)
+          }
           className="pagination-button"
         >
           <ChevronRight size={20} />
@@ -394,7 +356,7 @@ const EventDashboardPage = () => {
               {searchResults.length > 0 && (
                 <div className="search-result">
                   {searchResults.map((user) => (
-                    <div key={user.user_id}>
+                    <div key={user.user_id} className="search-result-item">
                       <p>
                         {user.first_name} {user.last_name} ({user.email_address}
                         )
@@ -425,10 +387,7 @@ const EventDashboardPage = () => {
                   <input
                     type="text"
                     value={attendeeSearch}
-                    onChange={(e) => {
-                      setAttendeeSearch(e.target.value);
-                      setCurrentPage(1);
-                    }}
+                    onChange={(e) => setAttendeeSearch(e.target.value)}
                     placeholder="Search attendees..."
                     className="search-input"
                   />
@@ -439,7 +398,7 @@ const EventDashboardPage = () => {
                 <div className="loading-container">Loading users...</div>
               ) : (
                 <>
-                  {users.length > 0 ? (
+                  {currentPageUsers.length > 0 ? (
                     <div className="users-content">
                       <div className="table-container">
                         <table>

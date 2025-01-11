@@ -6,17 +6,20 @@ function NavigationBar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState(null);
   const [userType, setUserType] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     const userId = localStorage.getItem("userId");
     const userType = localStorage.getItem("userType");
+    const isAdmin = localStorage.getItem("isAdmin");
     setIsLoggedIn(!!token);
     setUserId(userId);
     setUserType(userType);
+    setIsAdmin(isAdmin);
   }, []);
 
-  const isManagerOrAdmin = userType === "admin" || userType === "company";
+  const isManagerOrAdmin = isAdmin === true || userType === "company";
 
   return (
     <nav className="navbar">
@@ -36,7 +39,7 @@ function NavigationBar() {
               <Link to="/manager">Manager</Link>
             </li>
             <li>
-              <Link to="/company-users">Company Users</Link>
+              <Link to="/company-management">Company Users</Link>
             </li>
           </>
         )}

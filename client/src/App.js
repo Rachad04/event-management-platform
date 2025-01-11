@@ -25,7 +25,7 @@ function App() {
         <Route path="/tickets/:eventId" element={<TicketingPage />} />
         <Route path="/manager" element={<ManagerPage />} />
         <Route
-          path="/company-users"
+          path="/company-management"
           element={
             <ProtectedRoute>
               <EventDashboardPage />
