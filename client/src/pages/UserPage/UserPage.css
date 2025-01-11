@@ -2,7 +2,7 @@
   width: 100vw;
   height: calc(100vh - 8vh); /* Adjust height to account for the nav bar */
   margin-top: 8vh; /* Push the container below the nav bar */
-  background-image: url("/images/eventscom_cover.jpeg");
+  /* background-image: url("/images/background.jpeg"); */
   color: var(--primary);
   position: absolute;
   overflow: hidden;
@@ -192,18 +192,18 @@
 }
 
 .cancel-button {
-  background-color: #f44336;
+  background-color: var(--errors);
   color: white;
   border: none;
 }
 
 .error-message {
-  color: #f44336;
+  color: var(--errors);
   margin-bottom: 1rem;
 }
 
 .success-message {
-  color: #4caf50;
+  color: var(--success);
   margin-bottom: 1rem;
 }
 

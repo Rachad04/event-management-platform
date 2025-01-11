@@ -74,6 +74,29 @@ const userTypeIsValid = (type) => {
   return false;
 };
 
+// Search for user by email
+app.get("/api/users/search", authenticateToken, async (req, res) => {
+  const { email } = req.query;
+
+  try {
+    const userQuery = `
+      SELECT user_id, first_name, last_name, email_address, phone_number
+      FROM users
+      WHERE email_address = $1
+    `;
+    const user = await pool.query(userQuery, [email]);
+
+    if (user.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(user.rows[0]);
+  } catch (error) {
+    console.error("Error searching for user:", error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // GET
 app.get("/api/users/:id", authenticateToken, async (req, res) => {
   try {
@@ -291,7 +314,6 @@ app.listen(port, () => {
 });
 
 // apis for event dashboard page
-// Add these endpoints to your existing server.js
 
 // Get current user type
 app.get("/api/user", authenticateToken, async (req, res) => {
@@ -453,3 +475,101 @@ app.get("/api/events/:id/users", authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// Add user to event
+app.post("/api/events/:id/users", authenticateToken, async (req, res) => {
+  const eventId = req.params.id;
+  const { userId } = req.body;
+
+  try {
+    // Check if user has access to this event's company
+    const accessCheckQuery = `
+      SELECT 1 
+      FROM event e
+      JOIN managing_company mc ON mc.managing_company_id = e.managing_company_id
+      LEFT JOIN users u ON u.user_id = $1
+      WHERE e.event_id = $2
+      AND (
+        mc.representative_manager_id = $1 
+        OR u.user_type = 'admin'
+      )
+    `;
+    const accessCheck = await pool.query(accessCheckQuery, [
+      req.user.id,
+      eventId,
+    ]);
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    // Check if user is already in the event
+    const existingUserQuery = `
+      SELECT 1 FROM purchases
+      WHERE event_id = $1 AND user_id = $2
+    `;
+    const existingUser = await pool.query(existingUserQuery, [eventId, userId]);
+
+    if (existingUser.rows.length > 0) {
+      return res
+        .status(400)
+        .json({ message: "User already added to this event" });
+    }
+
+    // Add user to event
+    const insertQuery = `
+      INSERT INTO purchases (event_id, user_id, purchase_date)
+      VALUES ($1, $2, CURRENT_TIMESTAMP)
+    `;
+    await pool.query(insertQuery, [eventId, userId]);
+
+    res.json({ message: "User added successfully" });
+  } catch (error) {
+    console.error("Error adding user to event:", error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Remove user from event
+app.delete(
+  "/api/events/:eventId/users/:userId",
+  authenticateToken,
+  async (req, res) => {
+    const { eventId, userId } = req.params;
+
+    try {
+      // Check if user has access to this event's company
+      const accessCheckQuery = `
+      SELECT 1 
+      FROM event e
+      JOIN managing_company mc ON mc.managing_company_id = e.managing_company_id
+      LEFT JOIN users u ON u.user_id = $1
+      WHERE e.event_id = $2
+      AND (
+        mc.representative_manager_id = $1 
+        OR u.user_type = 'admin'
+      )
+    `;
+      const accessCheck = await pool.query(accessCheckQuery, [
+        req.user.id,
+        eventId,
+      ]);
+
+      if (accessCheck.rows.length === 0) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Remove user from event
+      const deleteQuery = `
+      DELETE FROM purchases
+      WHERE event_id = $1 AND user_id = $2
+    `;
+      await pool.query(deleteQuery, [eventId, userId]);
+
+      res.json({ message: "User removed successfully" });
+    } catch (error) {
+      console.error("Error removing user from event:", error.message);
+      res.status(500).json({ message: "Server error" });
+    }
+  }
+);
