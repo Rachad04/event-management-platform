@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 import axios from "axios";
-import { Search } from "lucide-react";
 import "./EventDashboardPage.css";
 
 const axiosInstance = axios.create({
@@ -16,181 +16,323 @@ axiosInstance.interceptors.request.use((config) => {
   return config;
 });
 
+const USERS_PER_PAGE = 10;
+
 const EventDashboardPage = () => {
+  // Core state
   const [companies, setCompanies] = useState([]);
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [userType, setUserType] = useState(null);
+
+  // Users state
+  const [users, setUsers] = useState([]);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Search and filter state
+  const [attendeeSearch, setAttendeeSearch] = useState("");
+  const searchTimeoutRef = useRef(null);
   const [searchEmail, setSearchEmail] = useState("");
-  const [searchResult, setSearchResult] = useState(null);
+  const [searchResults, setSearchResults] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
+
+  // UI state
+  const [loading, setLoading] = useState({
+    initial: true,
+    users: false,
+    search: false,
+  });
+  const [error, setError] = useState("");
   const [addUserError, setAddUserError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Fetch user type and managed companies on component mount
+  // Fetch initial data only once
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         const userResponse = await axiosInstance.get("/api/user");
         setUserType(userResponse.data.userType);
 
-        if (userResponse.data.is_admin === true) {
-          // Fetch all companies for admin
-          const companiesResponse = await axiosInstance.get("/api/companies");
-          setCompanies(companiesResponse.data);
-        } else {
-          // Fetch companies where user is manager
-          const managedCompaniesResponse = await axiosInstance.get(
-            "/api/companies/managed"
-          );
-          setCompanies(managedCompaniesResponse.data);
-        }
-        setLoading(false);
+        const companiesResponse = await axiosInstance.get(
+          userResponse.data.is_admin
+            ? "/api/companies"
+            : "/api/companies/managed"
+        );
+        setCompanies(companiesResponse.data);
       } catch (err) {
         setError(err.response?.data?.message || "Failed to load initial data");
-        setLoading(false);
+      } finally {
+        setLoading((prev) => ({ ...prev, initial: false }));
       }
     };
 
     fetchInitialData();
   }, []);
 
-  // Fetch events when company is selected
-  useEffect(() => {
-    const fetchCompanyEvents = async () => {
-      if (!selectedCompany) return;
+  // Fetch company events only when company changes
+  const fetchCompanyEvents = useCallback(async (companyId) => {
+    if (!companyId) return;
 
-      try {
-        const response = await axiosInstance.get(
-          `/api/companies/${selectedCompany}/events`
-        );
-        setEvents(response.data);
-        setSelectedEvent(null); // Reset selected event
-        setUsers([]); // Reset users list
-      } catch (err) {
-        setError(
-          err.response?.data?.message || "Failed to load company events"
-        );
-      }
-    };
+    try {
+      const response = await axiosInstance.get(
+        `/api/companies/${companyId}/events`
+      );
+      setEvents(response.data);
+      setSelectedEvent(null);
+      setUsers([]);
+      setCurrentPage(1);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load company events");
+    }
+  }, []);
 
-    fetchCompanyEvents();
-  }, [selectedCompany]);
+  // Modified searchUsers function to fetch all users without search parameter
+  const fetchEventUsers = useCallback(async () => {
+    if (!selectedEvent) return;
 
-  // Fetch users when event is selected
-  useEffect(() => {
-    const fetchEventUsers = async () => {
+    setLoading((prev) => ({ ...prev, users: true }));
+    try {
+      const response = await axiosInstance.get(
+        `/api/events/${selectedEvent}/users`,
+        {
+          params: {
+            page: currentPage,
+            limit: USERS_PER_PAGE,
+          },
+        }
+      );
+
+      const fetchedUsers = response.data.users || [];
+      setUsers(fetchedUsers);
+      setFilteredUsers(fetchedUsers);
+      setTotalUsers(response.data.total || 0);
+      setTotalPages(Math.ceil(response.data.total / USERS_PER_PAGE));
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load users");
+    } finally {
+      setLoading((prev) => ({ ...prev, users: false }));
+    }
+  }, [selectedEvent, currentPage]);
+
+  // Debounced user search
+  const searchUsers = useCallback(
+    async (searchTerm) => {
       if (!selectedEvent) return;
 
+      setLoading((prev) => ({ ...prev, users: true }));
       try {
         const response = await axiosInstance.get(
-          `/api/events/${selectedEvent}/users`
+          `/api/events/${selectedEvent}/users`,
+          {
+            params: {
+              page: currentPage,
+              limit: USERS_PER_PAGE,
+              search: searchTerm,
+            },
+          }
         );
-        setUsers(response.data);
+
+        setUsers(response.data.users || []);
+        setTotalUsers(response.data.total || 0);
+        setTotalPages(Math.ceil(response.data.total / USERS_PER_PAGE));
       } catch (err) {
-        setError(err.response?.data?.message || "Failed to load event users");
+        setError(err.response?.data?.message || "Failed to load users");
+      } finally {
+        setLoading((prev) => ({ ...prev, users: false }));
+      }
+    },
+    [selectedEvent, currentPage]
+  );
+
+  // Handle attendee search with debounce
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      if (attendeeSearch.trim()) {
+        const searchTerm = attendeeSearch.toLowerCase();
+        const filtered = users.filter(
+          (user) =>
+            user.first_name.toLowerCase().includes(searchTerm) ||
+            user.last_name.toLowerCase().includes(searchTerm) ||
+            user.email_address.toLowerCase().includes(searchTerm) ||
+            (user.phone_number && user.phone_number.includes(searchTerm))
+        );
+        setFilteredUsers(filtered);
+      } else {
+        setFilteredUsers(users);
+      }
+    }, 500);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
       }
     };
+  }, [attendeeSearch, users]);
 
-    fetchEventUsers();
-  }, [selectedEvent]);
+  useEffect(() => {
+    if (selectedEvent) {
+      fetchEventUsers();
+    }
+  }, [selectedEvent, fetchEventUsers]);
+
+  // Optimized user search for adding new users
+  const searchNewUser = useCallback(
+    async (email) => {
+      if (!email.trim()) {
+        setSearchResults([]);
+        return;
+      }
+
+      setLoading((prev) => ({ ...prev, search: true }));
+      try {
+        const response = await axiosInstance.get(
+          `/api/users/search?email=${encodeURIComponent(email.trim())}`
+        );
+        if (response.data) {
+          const isUserAlreadyAdded = users.some(
+            (user) => user.user_id === response.data.user_id
+          );
+          setSearchResults(isUserAlreadyAdded ? [] : [response.data]);
+          if (isUserAlreadyAdded) {
+            setAddUserError("User already added to event");
+          }
+        }
+      } catch (err) {
+        setAddUserError(err.response?.data?.message || "User not found");
+        setSearchResults([]);
+      } finally {
+        setLoading((prev) => ({ ...prev, search: false }));
+      }
+    },
+    [users]
+  );
+
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      searchNewUser(searchEmail);
+    }, 500);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchEmail, searchNewUser]);
 
   const handleCompanyChange = (e) => {
-    setSelectedCompany(e.target.value);
+    const companyId = e.target.value;
+    setSelectedCompany(companyId);
+    fetchCompanyEvents(companyId);
   };
 
   const handleEventChange = (e) => {
     setSelectedEvent(e.target.value);
+    setCurrentPage(1);
+    setAttendeeSearch("");
+    setFilteredUsers([]);
   };
 
-  if (loading) return <div className="loading-container">Loading...</div>;
-  if (error) return <div className="error-message">{error}</div>;
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+  };
+
+  const handleAddUser = async (user) => {
+    try {
+      await axiosInstance.post(`/api/events/${selectedEvent}/users`, {
+        userId: user.user_id,
+      });
+
+      // Optimistically update UI
+      setUsers((prev) => [...prev, user]);
+      setTotalUsers((prev) => prev + 1);
+      setSearchEmail("");
+      setSearchResults([]);
+      setSuccessMessage("User added successfully");
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (err) {
+      setAddUserError(err.response?.data?.message || "Failed to add user");
+      // Refresh the list to ensure consistency
+      searchUsers(attendeeSearch);
+    }
+  };
 
   const handleRemoveUser = async (userId) => {
     try {
-      const response = await axiosInstance.delete(
+      await axiosInstance.delete(
         `/api/events/${selectedEvent}/users/${userId}`
       );
-      if (response.status === 200) {
-        setUsers(users.filter((user) => user.user_id !== userId));
-        setSuccessMessage("User removed successfully");
-        setTimeout(() => setSuccessMessage(""), 3000);
-      }
+
+      // Optimistically update UI
+      setUsers((prev) => prev.filter((user) => user.user_id !== userId));
+      setTotalUsers((prev) => prev - 1);
+      setSuccessMessage("User removed successfully");
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to remove user");
-    }
-  };
-
-  const handleSearchUser = async () => {
-    if (!searchEmail.trim()) {
-      setAddUserError("Please enter an email address");
-      return;
-    }
-
-    setLoading(true);
-    setAddUserError("");
-    setSearchResult(null);
-
-    try {
-      const response = await axiosInstance.get(
-        `/api/users/search?email=${encodeURIComponent(searchEmail.trim())}`
-      );
-
-      if (response.data) {
-        // Check if user is already in the event
-        const isUserAlreadyAdded = users.some(
-          (user) => user.user_id === response.data.user_id
-        );
-
-        if (isUserAlreadyAdded) {
-          setAddUserError("This user is already added to the event");
-        } else {
-          setSearchResult(response.data);
-        }
-      }
-    } catch (err) {
-      console.error("Search error:", err);
-      setAddUserError(
-        err.response?.data?.message ||
-          "User not found. Please check the email address."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddUser = async () => {
-    if (!searchResult) return;
-
-    try {
-      const response = await axiosInstance.post(
-        `/api/events/${selectedEvent}/users`,
-        {
-          userId: searchResult.user_id,
-        }
-      );
-
-      if (response.status === 200) {
-        // Check if user is already in the list
-        if (!users.find((u) => u.user_id === searchResult.user_id)) {
-          setUsers([...users, searchResult]);
-        }
-        setSuccessMessage("User added successfully");
-        setSearchEmail("");
-        setSearchResult(null);
-        setTimeout(() => setSuccessMessage(""), 3000);
-      }
-    } catch (err) {
-      setAddUserError(err.response?.data?.message || "Failed to add user");
+      // Refresh the list to ensure consistency
+      searchUsers(attendeeSearch);
     }
   };
 
   const MessageAlert = ({ message, type }) => (
     <div className={`message-alert ${type}`}>{message}</div>
   );
+
+  // Update the pagination calculation based on filtered results
+  const displayedUsers = filteredUsers;
+  const displayedTotalUsers = filteredUsers.length;
+  const displayedTotalPages = Math.ceil(displayedTotalUsers / USERS_PER_PAGE);
+  const startIndex = (currentPage - 1) * USERS_PER_PAGE;
+  const endIndex = Math.min(startIndex + USERS_PER_PAGE, displayedTotalUsers);
+  const currentPageUsers = displayedUsers.slice(startIndex, endIndex);
+
+  const PaginationControls = () => (
+    <div className="pagination-controls">
+      <div className="pagination-info">
+        <span>
+          Showing {startIndex + 1} to {endIndex} of {displayedTotalUsers} users
+        </span>
+      </div>
+      <div className="pagination-buttons">
+        <button
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="pagination-button"
+        >
+          <ChevronLeft size={20} />
+        </button>
+        <span className="pagination-page-info">
+          Page {currentPage} of {displayedTotalPages}
+        </span>
+        <button
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === displayedTotalPages}
+          className="pagination-button"
+        >
+          <ChevronRight size={20} />
+        </button>
+      </div>
+    </div>
+  );
+
+  if (loading.initial)
+    return <div className="loading-container">Loading...</div>;
+  if (error) return <div className="error-message">{error}</div>;
 
   return (
     <div className="management-container">
@@ -232,87 +374,119 @@ const EventDashboardPage = () => {
         )}
 
         {selectedEvent && (
-          <div className="add-user-section">
-            <h3>Add User to Event</h3>
-            <div className="search-container">
-              <input
-                type="email"
-                value={searchEmail}
-                onChange={(e) => setSearchEmail(e.target.value)}
-                placeholder="Search user by email"
-                className="search-input"
-              />
-              <button onClick={handleSearchUser} className="search-button">
-                <Search size={18} />
-                Search
-              </button>
-            </div>
-
-            {searchResult && (
-              <div className="search-result">
-                <p>
-                  Found: {searchResult.first_name} {searchResult.last_name} (
-                  {searchResult.email_address})
-                </p>
-                <button onClick={handleAddUser} className="add-button">
-                  Add to Event
+          <>
+            <div className="add-user-section">
+              <h3>Add User to Event</h3>
+              <div className="search-container">
+                <input
+                  type="email"
+                  value={searchEmail}
+                  onChange={(e) => setSearchEmail(e.target.value)}
+                  placeholder="Search user by email"
+                  className="search-input"
+                />
+                <button className="search-button" disabled={loading.search}>
+                  <Search size={18} />
+                  Search
                 </button>
               </div>
-            )}
 
-            {addUserError && (
-              <MessageAlert message={addUserError} type="error" />
-            )}
-            {successMessage && (
-              <MessageAlert message={successMessage} type="success" />
-            )}
-          </div>
-        )}
+              {searchResults.length > 0 && (
+                <div className="search-result">
+                  {searchResults.map((user) => (
+                    <div key={user.user_id}>
+                      <p>
+                        {user.first_name} {user.last_name} ({user.email_address}
+                        )
+                      </p>
+                      <button
+                        onClick={() => handleAddUser(user)}
+                        className="add-button"
+                      >
+                        Add to Event
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-        {selectedEvent && (
-          <div className="users-card">
-            <h2>Event Attendees</h2>
-            {users.length > 0 ? (
-              <div className="table-container">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Phone</th>
-                      <th>Purchase Date</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((user) => (
-                      <tr key={user.user_id}>
-                        <td>{`${user.first_name} ${user.last_name}`}</td>
-                        <td>{user.email_address}</td>
-                        <td>{user.phone_number || "N/A"}</td>
-                        <td>
-                          {new Date(user.purchase_date).toLocaleDateString()}
-                        </td>
-                        <td>
-                          <button
-                            onClick={() => handleRemoveUser(user.user_id)}
-                            className="remove-button"
-                          >
-                            Remove
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              {addUserError && (
+                <MessageAlert message={addUserError} type="error" />
+              )}
+              {successMessage && (
+                <MessageAlert message={successMessage} type="success" />
+              )}
+            </div>
+
+            <div className="users-card">
+              <div className="users-header">
+                <h2>Event Attendees</h2>
+                <div className="search-container">
+                  <input
+                    type="text"
+                    value={attendeeSearch}
+                    onChange={(e) => {
+                      setAttendeeSearch(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    placeholder="Search attendees..."
+                    className="search-input"
+                  />
+                </div>
               </div>
-            ) : (
-              <p className="no-users">No users found for this event.</p>
-            )}
-          </div>
+
+              {loading.users ? (
+                <div className="loading-container">Loading users...</div>
+              ) : (
+                <>
+                  {users.length > 0 ? (
+                    <div className="users-content">
+                      <div className="table-container">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Name</th>
+                              <th>Email</th>
+                              <th>Phone</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {currentPageUsers.map((user) => (
+                              <tr key={user.user_id}>
+                                <td>
+                                  {user.first_name} {user.last_name}
+                                </td>
+                                <td>{user.email_address}</td>
+                                <td>{user.phone_number || "N/A"}</td>
+                                <td>
+                                  <button
+                                    onClick={() =>
+                                      handleRemoveUser(user.user_id)
+                                    }
+                                    className="remove-button"
+                                  >
+                                    Remove
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <PaginationControls />
+                    </div>
+                  ) : (
+                    <p className="no-users">No users found.</p>
+                  )}
+                </>
+              )}
+            </div>
+          </>
         )}
       </div>
     </div>
   );
 };
+
 export default EventDashboardPage;
