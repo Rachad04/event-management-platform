@@ -985,3 +985,38 @@ app.listen(port, async () => {
   await initDatabase();
   console.log(`Server running on port ${port}`);
 });
+
+// Get all events
+app.get("/api/events", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM events");
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get ticket information for a specific event
+app.get("/api/tickets/:id", async (req, res) => {
+  const eventId = req.params.id;
+  try {
+    const result = await pool.query("SELECT * FROM tickets WHERE event_id = $1", [eventId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Payment processing (placeholder)
+app.post("/api/pay", async (req, res) => {
+  const { ticketId, paymentMethod } = req.body;
+  try {
+    // Payment integration logic will go here
+    res.json({ message: "Payment successful!", ticketId, paymentMethod });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Payment processing failed" });
+  }
+});
