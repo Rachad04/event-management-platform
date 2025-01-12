@@ -24,7 +24,9 @@ function NavigationBar() {
   return (
     <nav className="navbar">
       <div className="navbar-logo">
-        <img src="/logo-icon.png" alt="Logo" />
+        <Link to="/">
+          <img src="/logo-icon.png" alt="Logo" />
+        </Link>
       </div>
       <ul className="navbar-links">
         <li>
@@ -39,7 +41,7 @@ function NavigationBar() {
               <Link to="/manager">Manager</Link>
             </li>
             <li>
-              <Link to="/company-management">Company Users</Link>
+              <Link to="/company-management">Dashboard</Link>
             </li>
           </>
         )}
@@ -47,7 +49,7 @@ function NavigationBar() {
           <div>
             <Link to={`/users/user/${userId}`} className="user-icon">
               <img
-                src="/images/user-icon-2.png"
+                src="/images/user-icon-2-secondary.png"
                 alt="User Icon"
                 className="user-image"
               />
