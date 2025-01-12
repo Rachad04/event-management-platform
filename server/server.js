@@ -218,7 +218,24 @@ app.post(
       }
 
       // Generate username
-      const userName = getEmailUsername(email);
+      let valid = false;
+      let userName = getEmailUsername(email);
+
+      do {
+        const userNameExists = await pool.query(
+          "SELECT * FROM users WHERE username = $1",
+          [userName]
+        );
+
+        if (userNameExists.rows.length === 0) {
+          valid = true; // Username is available
+        } else {
+          // Append random number to original username
+          userName = `${getEmailUsername(email)}${Math.floor(
+            Math.random() * 1000
+          )}`;
+        }
+      } while (!valid);
 
       // Hash password
       const salt = await bcrypt.genSalt(10);
