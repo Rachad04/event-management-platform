@@ -12,6 +12,7 @@ import ManagerPage from "./pages/ManagerPage/ManagerPage";
 import ProtectedRoute from "./Components/ProtectedRoute";
 import NavigationBar from "./Components/NavigationBar/NavigationBar";
 import EventDashboardPage from "./pages/EventDashboardPage/EventDashboardPage";
+import Page404 from "./pages/Page404/Page404";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
       <NavigationBar />
       <Routes>
         <Route exact path="/" element={<HomePage />} />
+        <Route exact path="*" element={<Page404 />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/sign-up" element={<SignUpPage />} />
         <Route path="/events" element={<EventsPage />} />
