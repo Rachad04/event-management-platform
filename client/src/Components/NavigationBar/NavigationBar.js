@@ -1,25 +1,52 @@
-import React, { useState, useEffect } from "react";
+import React, { useContext, useMemo, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { AuthContext } from "../../Contexts/AuthContext";
+import axios from "axios";
 import "./NavigationBar.css";
 
+const axiosInstance = axios.create({
+  baseURL: "http://localhost:5000",
+  headers: { "Content-Type": "application/json" },
+});
+
 function NavigationBar() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userId, setUserId] = useState(null);
-  const [userType, setUserType] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(null);
+  const { auth } = useContext(AuthContext);
+  const [userData, setUserData] = useState(null);
+  const isLoggedIn = !!auth.token && !auth.loading;
+  const isManagerOrAdmin =
+    auth.user?.isAdmin || auth.user?.userType === "company";
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userId = localStorage.getItem("userId");
-    const userType = localStorage.getItem("userType");
-    const isAdmin = localStorage.getItem("isAdmin");
-    setIsLoggedIn(!!token);
-    setUserId(userId);
-    setUserType(userType);
-    setIsAdmin(isAdmin);
-  }, []);
+    const fetchUserData = async () => {
+      if (auth.user?.id) {
+        try {
+          const response = await axiosInstance.get(
+            `/api/users/${auth.user.id}`
+          );
+          setUserData(response.data);
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+        }
+      }
+    };
 
-  const isManagerOrAdmin = isAdmin === true || userType === "company";
+    if (isLoggedIn) {
+      fetchUserData();
+    }
+  }, [auth.user?.id, isLoggedIn]);
+
+  const profilePictureUrl = useMemo(() => {
+    const profilePicture =
+      userData?.profile_picture || auth.user?.profile_picture;
+
+    if (!profilePicture) {
+      return "/images/user-icon-2-secondary.png";
+    }
+
+    return profilePicture.startsWith("http")
+      ? profilePicture
+      : `http://localhost:5000${profilePicture}`;
+  }, [userData?.profile_picture, auth.user?.profile_picture]);
 
   return (
     <nav className="navbar">
@@ -46,12 +73,15 @@ function NavigationBar() {
           </>
         )}
         {isLoggedIn ? (
-          <div>
-            <Link to={`/users/user/${userId}`} className="user-icon">
+          <div className="profile-container">
+            <Link to={`/users/user/${auth.user?.id}`}>
               <img
-                src="/images/user-icon-2-secondary.png"
-                alt="User Icon"
+                src={profilePictureUrl}
+                alt="User Profile"
                 className="user-image"
+                onError={(e) => {
+                  e.target.src = "/images/user-icon-2-secondary.png";
+                }}
               />
             </Link>
           </div>

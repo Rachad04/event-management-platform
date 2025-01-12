@@ -6,10 +6,10 @@ import "./LoginPage.css";
 
 function LoginPage() {
   const { login } = useContext(AuthContext);
-  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [formData, setFormData] = useState({ identifier: "", password: "" });
   const [errors, setErrors] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { email, password } = formData;
+  const { identifier, password } = formData;
   const navigate = useNavigate();
 
   const onChange = (e) =>
@@ -21,16 +21,12 @@ function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Login request
       const res = await axios.post("http://localhost:5000/api/login", formData);
-
-      // Wait for login to complete and get user data
       const userData = await login(res.data.token);
 
-      // Store userId and navigate
       if (userData?.id) {
         localStorage.setItem("userId", userData.id);
-        navigate(`/users/user/${userData.id}`, { replace: true });
+        navigate(`/events`, { replace: true });
       } else {
         throw new Error("User ID not found in response");
       }
@@ -49,20 +45,28 @@ function LoginPage() {
 
   return (
     <div className="login-page">
-      <h2>Login</h2>
-      {errors.length > 0 &&
-        errors.map((error, index) => (
-          <p key={index} className="error-message">
-            {error.msg}
-          </p>
-        ))}
       <form className="login-form" onSubmit={onSubmit}>
+        <h2
+          style={{
+            textAlign: "center",
+            marginBottom: "2rem",
+            fontFamily: "roboto",
+          }}
+        >
+          Login
+        </h2>
+        {errors.length > 0 &&
+          errors.map((error, index) => (
+            <p key={index} className="error-message">
+              {error.msg}
+            </p>
+          ))}
         <div>
-          <label>Email:</label>
+          <label>Email or Username:</label>
           <input
-            type="email"
-            name="email"
-            value={email}
+            type="text"
+            name="identifier"
+            value={identifier}
             onChange={onChange}
             required
             disabled={isLoading}
@@ -86,9 +90,29 @@ function LoginPage() {
         >
           {isLoading ? "Logging in..." : "Login"}
         </button>
-        <Link to="/forgot-password" className="forgot-password-link">
-          Forgot your password?
-        </Link>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-around",
+            alignItems: "center",
+            flexDirection: "column",
+          }}
+        >
+          <Link
+            to="/sign-up"
+            className="forgot-password-link"
+            style={{ textAlign: "end", marginTop: "0.5rem" }}
+          >
+            Don't have an account? Sign up
+          </Link>
+          <Link
+            to="/forgot-password"
+            className="forgot-password-link"
+            style={{ textAlign: "end", marginTop: "0.5rem" }}
+          >
+            Forgot password
+          </Link>
+        </div>
       </form>
     </div>
   );

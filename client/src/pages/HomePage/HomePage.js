@@ -6,7 +6,7 @@ import "./HomePage.css";
 const HomePage = () => {
   return (
     <div className="homepage">
-      <div className="header">
+      {/* <div className="header">
         <button className="redirect-button">
           <Link to="/sign-up" relative="path">
             Sign up
@@ -17,7 +17,7 @@ const HomePage = () => {
             Login
           </Link>
         </button>
-      </div>
+      </div> */}
 
       {/* Hero Section */}
       <div className="hero-section">
@@ -39,7 +39,9 @@ const HomePage = () => {
               Set up and manage your events in a few clicks. Customize details
               and send invitations with ease.
             </p>
-            <button className="card-button">Start Now</button>
+            <Link to={"/manager"}>
+              <button className="card-button">Start Now</button>
+            </Link>
           </div>
           <div className="card">
             <h3>Track RSVPs</h3>
@@ -47,7 +49,9 @@ const HomePage = () => {
               Monitor responses in real-time, and keep track of attendee
               confirmations and changes.
             </p>
-            <button className="card-button">Track RSVPs</button>
+            <Link to={"/company-management"}>
+              <button className="card-button">Track RSVPs</button>
+            </Link>
           </div>
           <div className="card">
             <h3>Connect with Attendees</h3>
@@ -55,7 +59,9 @@ const HomePage = () => {
               Engage with your guests, share updates, and keep everyone informed
               on event details.
             </p>
-            <button className="card-button">Connect Now</button>
+            <Link to={"/events"}>
+              <button className="card-button">Connect Now</button>
+            </Link>
           </div>
         </div>
       </section>

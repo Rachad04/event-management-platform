@@ -1,7 +1,7 @@
 import React, { useState, useContext } from "react";
 import axios from "axios";
 import { AuthContext } from "../../Contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import "./SignUpPage.css";
 
 function SignUpPage() {
@@ -71,14 +71,22 @@ function SignUpPage() {
 
   return (
     <div className="sign-up-page">
-      <h2>Sign Up</h2>
-      {errors.length > 0 &&
-        errors.map((error, index) => (
-          <p key={index} className="error-message">
-            {error.msg}
-          </p>
-        ))}
       <form className="sign-up-form" autoComplete="off" onSubmit={onSubmit}>
+        <h2
+          style={{
+            textAlign: "center",
+            marginBottom: "2rem",
+            fontFamily: "roboto",
+          }}
+        >
+          Sign Up
+        </h2>
+        {errors.length > 0 &&
+          errors.map((error, index) => (
+            <p key={index} className="error-message">
+              {error.msg}
+            </p>
+          ))}
         <div>
           <label>Email:</label>
           <input
@@ -136,6 +144,13 @@ function SignUpPage() {
         >
           {isLoading ? "Signing Up..." : "Sign Up"}
         </button>
+        <Link
+          to="/login"
+          className="link"
+          style={{ textAlign: "end", marginTop: "0.5rem" }}
+        >
+          Have an account? Log in
+        </Link>
       </form>
     </div>
   );

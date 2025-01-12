@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useContext } from "react";
+import React, { useState, useEffect, useRef, useContext, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import axios from "axios";
@@ -28,19 +28,58 @@ const UserPage = () => {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const { CurrentEventsContent, PreviousEventsContent } = EventsTab();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  // Keep track of which input is currently focused
+  const [focusedInput, setFocusedInput] = useState(null);
 
-  // Keep existing helper functions and effects...
-  const handleInputChange = useCallback((e) => {
+  const { auth } = useContext(AuthContext);
+
+  const profilePictureUrl = useMemo(() => {
+    if (!userData?.profile_picture) {
+      return "/images/user-icon-2-secondary.png";
+    }
+    // Handle both absolute and relative URLs
+    return userData.profile_picture.startsWith("http")
+      ? userData.profile_picture
+      : `http://localhost:5000${userData.profile_picture}`;
+  }, [userData?.profile_picture]);
+
+  // refs for each input field
+  const inputRefs = {
+    firstName: useRef(null),
+    lastName: useRef(null),
+    username: useRef(null),
+    email: useRef(null),
+    phone: useRef(null),
+    location: useRef(null),
+    birthday: useRef(null),
+    gender: useRef(null),
+  };
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (focusedInput && inputRefs[focusedInput]?.current) {
+      const input = inputRefs[focusedInput].current;
+      const cursorPosition = input.selectionStart;
+      input.focus();
+      // Restore cursor position
+      input.setSelectionRange(cursorPosition, cursorPosition);
+    }
+  }, [formData, focusedInput]);
+
+  // helper functions
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
+    setFocusedInput(name);
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
-  }, []);
+  };
 
   const handleLogout = () => {
     logout();
@@ -101,6 +140,12 @@ const UserPage = () => {
         lastName: userData.lastName || userData.last_name || userData.lastname,
       };
       setFormData(formattedData);
+    } else {
+      // Reset selected image and file input when closing edit mode
+      setSelectedImage(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   }, [isEditing, userData]);
 
@@ -129,6 +174,12 @@ const UserPage = () => {
     }
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setSelectedImage(file);
+  };
+
   if (loading) return <div>Loading...</div>;
   if (!userData) return <div>User not found</div>;
   if (error) return <div>{error}</div>;
@@ -155,33 +206,49 @@ const UserPage = () => {
       setError("");
       setSuccess("");
 
-      if (formData.newPassword !== formData.confirmPassword) {
-        setError("New passwords do not match");
-        return;
-      }
-
-      if (formData.newPassword.length < 8) {
-        setError("New password must be at least 8 characters long");
-        return;
-      }
-
       try {
+        // First, update user data
         const response = await axiosInstance.put(
-          `/api/users/${user_id}/password`,
+          `/api/users/${user_id}`,
           formData
         );
-        setSuccess(response.data.message);
-        setFormData({
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-        });
-        // Close modal after successful password change
+
+        // If there's a selected image, upload it
+        if (selectedImage) {
+          const imageFormData = new FormData();
+          imageFormData.append("profilePicture", selectedImage);
+
+          await axiosInstance.post(
+            `/api/users/${user_id}/profile-picture`,
+            imageFormData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+        }
+
+        // Update local state
+        const updatedUserResponse = await axiosInstance.get(
+          `/api/users/${user_id}`
+        );
+        setUserData(updatedUserResponse.data);
+        setFormData(null);
+        setSelectedImage(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        setIsEditing(false);
+        setSuccess("Profile updated successfully!");
         setTimeout(() => {
-          onClose();
-        }, 2000);
-      } catch (err) {
-        setError(err.response?.data?.message || "Failed to change password");
+          setSuccess("");
+        }, 3000);
+      } catch (error) {
+        setError(error.response?.data?.message || "Failed to update profile");
+        setTimeout(() => {
+          setError("");
+        }, 3000);
       }
     };
 
@@ -262,11 +329,13 @@ const UserPage = () => {
             <label htmlFor="firstName">First Name:</label>
             <input
               id="firstName"
+              ref={inputRefs.firstName}
               type="text"
               name="firstName"
               value={formData?.firstName || ""}
               onChange={handleInputChange}
               className="form-input"
+              onFocus={() => setFocusedInput("firstName")}
             />
           </div>
 
@@ -274,11 +343,41 @@ const UserPage = () => {
             <label htmlFor="lastName">Last Name:</label>
             <input
               id="lastName"
+              ref={inputRefs.lastName}
               type="text"
               name="lastName"
               value={formData?.lastName || ""}
               onChange={handleInputChange}
               className="form-input"
+              onFocus={() => setFocusedInput("lastName")}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="username">Username:</label>
+            <input
+              id="username"
+              ref={inputRefs.username}
+              type="text"
+              name="username"
+              value={formData?.username || ""}
+              onChange={handleInputChange}
+              className="form-input"
+              onFocus={() => setFocusedInput("username")}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="email">Email:</label>
+            <input
+              id="email"
+              ref={inputRefs.email}
+              type="email"
+              name="email"
+              value={formData?.email || ""}
+              onChange={handleInputChange}
+              className="form-input"
+              onFocus={() => setFocusedInput("email")}
             />
           </div>
 
@@ -286,11 +385,13 @@ const UserPage = () => {
             <label htmlFor="phone">Phone:</label>
             <input
               id="phone"
+              ref={inputRefs.phone}
               type="tel"
               name="phone"
               value={formData?.phone || ""}
               onChange={handleInputChange}
               className="form-input"
+              onFocus={() => setFocusedInput("phone")}
             />
           </div>
 
@@ -298,11 +399,13 @@ const UserPage = () => {
             <label htmlFor="location">Location:</label>
             <input
               id="location"
+              ref={inputRefs.location}
               type="text"
               name="location"
               value={formData?.location || ""}
               onChange={handleInputChange}
               className="form-input"
+              onFocus={() => setFocusedInput("location")}
             />
           </div>
 
@@ -310,6 +413,7 @@ const UserPage = () => {
             <label htmlFor="birthday">Birthday:</label>
             <input
               id="birthday"
+              ref={inputRefs.birthday}
               type="date"
               name="birthday"
               value={
@@ -317,6 +421,7 @@ const UserPage = () => {
               }
               onChange={handleInputChange}
               className="form-input"
+              onFocus={() => setFocusedInput("birthday")}
             />
           </div>
 
@@ -324,15 +429,35 @@ const UserPage = () => {
             <label htmlFor="gender">Gender:</label>
             <select
               id="gender"
+              ref={inputRefs.gender}
               name="gender"
               value={formData?.gender || ""}
               onChange={handleInputChange}
               className="form-input"
+              onFocus={() => setFocusedInput("gender")}
             >
               <option value="">Select gender</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
             </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="profilePicture">Profile Picture:</label>
+            <input
+              id="profilePicture"
+              ref={fileInputRef}
+              type="file"
+              name="profilePicture"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="form-input"
+            />
+            {selectedImage && (
+              <span className="selected-file">
+                Selected: {selectedImage.name}
+              </span>
+            )}
           </div>
 
           <div className="button-group">
@@ -409,7 +534,6 @@ const UserPage = () => {
       style={{
         width: "100vw",
         height: "calc(100vh - 8vh)",
-        marginTop: "8vh",
         backgroundImage: "url('/images/background.jpeg')",
         position: "absolute",
         overflow: "hidden",
@@ -418,7 +542,19 @@ const UserPage = () => {
       <div className="content-wrapper">
         <div className="profile-card">
           <div className="profile-header">
-            <div className="profile-picture"></div>
+            <div
+              className="profile-picture"
+              style={{
+                backgroundImage: `url(${profilePictureUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundColor: "#f0f0f0", // Fallback color
+                border: "1px solid #ddd",
+                width: "150px", // Explicit dimensions
+                height: "150px",
+                borderRadius: "50%",
+              }}
+            />
             <h2>
               {userData.username ||
                 userData.userName ||
