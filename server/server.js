@@ -621,3 +621,24 @@ app.delete(
     }
   }
 );
+
+// GET purchased events by a user
+app.get("/api/users/:id/events", authenticateToken, async (req, res) => {
+  try {
+    const userEvents = await pool.query(
+      `
+      SELECT e.* 
+      FROM events e
+      JOIN purchases p ON p.event_id = e.event_id
+      WHERE p.user_id = $1
+      ORDER BY e.date DESC
+    `,
+      [req.params.id]
+    );
+
+    res.json(userEvents.rows);
+  } catch (error) {
+    console.error("Error fetching user events:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});

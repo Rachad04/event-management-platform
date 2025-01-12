@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import axios from "axios";
 import { AuthContext } from "./../../Contexts/AuthContext";
+import EventsTab from "../../Components/EventCard/EventCard";
 import "./UserPage.css";
 
 const axiosInstance = axios.create({
@@ -29,8 +30,9 @@ const UserPage = () => {
   const [formData, setFormData] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const { CurrentEventsContent, PreviousEventsContent } = EventsTab();
 
-  // Handle input changes
+  // Keep existing helper functions and effects...
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -56,12 +58,11 @@ const UserPage = () => {
 
   const formatDateForInput = (dateString) => {
     if (!dateString) return "";
-
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-CA"); // Returns YYYY-MM-DD format in local timezone
+    return date.toLocaleDateString("en-CA");
   };
 
-  // Fetch user data
+  // Fetch user data effect...
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -71,17 +72,14 @@ const UserPage = () => {
           setTimeout(() => {
             setError("");
           }, 3000);
-
           setLoading(false);
           return;
         }
 
         const response = await axiosInstance.get(`/api/users/${user_id}`);
-        console.log("Received user data:", response.data);
         setUserData(response.data);
       } catch (err) {
         setError(err.response?.data?.message || "Failed to load user data");
-
         setTimeout(() => {
           setError("");
         }, 3000);
@@ -93,7 +91,6 @@ const UserPage = () => {
     if (user_id) fetchUserData();
   }, [user_id]);
 
-  // When userData changes and we want to start editing, set formData
   useEffect(() => {
     if (isEditing && userData) {
       const formattedData = {
@@ -102,45 +99,29 @@ const UserPage = () => {
           userData.firstName || userData.first_name || userData.firstname,
         lastName: userData.lastName || userData.last_name || userData.lastname,
       };
-      console.log("Setting form data:", formattedData);
       setFormData(formattedData);
     }
   }, [isEditing, userData]);
 
-  if (error) {
-    return <div>{error}</div>;
-  }
-
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Submitting form data:", formData);
-    setError(""); // Clear any previous errors
-    setSuccess(""); // Clear any previous success messages
+    setError("");
+    setSuccess("");
 
     try {
       const response = await axiosInstance.put(
         `/api/users/${user_id}`,
         formData
       );
-
-      // Update the `userData` state with the latest changes
       setUserData(response.data);
-
-      // Reset formData and editing state
       setFormData(null);
       setIsEditing(false);
-
-      // Display success message
       setSuccess("Profile updated successfully!");
-
-      //Hide the success message after 3 seconds
       setTimeout(() => {
         setSuccess("");
       }, 3000);
     } catch (error) {
       setError(error.response?.data?.message || "Failed to update profile");
-
       setTimeout(() => {
         setError("");
       }, 3000);
@@ -149,101 +130,144 @@ const UserPage = () => {
 
   if (loading) return <div>Loading...</div>;
   if (!userData) return <div>User not found</div>;
+  if (error) return <div>{error}</div>;
 
-  const EditForm = (
-    <form onSubmit={handleSubmit} className="edit-form">
-      <div className="form-group">
-        <label htmlFor="firstName">First Name:</label>
-        <input
-          id="firstName"
-          type="text"
-          name="firstName"
-          value={formData?.firstName || ""}
-          onChange={handleInputChange}
-          className="form-input"
-        />
-      </div>
+  const UserDetailsContent = () => (
+    <>
+      {isEditing ? (
+        <form onSubmit={handleSubmit} className="edit-form">
+          <div className="form-group">
+            <label htmlFor="firstName">First Name:</label>
+            <input
+              id="firstName"
+              type="text"
+              name="firstName"
+              value={formData?.firstName || ""}
+              onChange={handleInputChange}
+              className="form-input"
+            />
+          </div>
 
-      <div className="form-group">
-        <label htmlFor="lastName">Last Name:</label>
-        <input
-          id="lastName"
-          type="text"
-          name="lastName"
-          value={formData?.lastName || ""}
-          onChange={handleInputChange}
-          className="form-input"
-        />
-      </div>
+          <div className="form-group">
+            <label htmlFor="lastName">Last Name:</label>
+            <input
+              id="lastName"
+              type="text"
+              name="lastName"
+              value={formData?.lastName || ""}
+              onChange={handleInputChange}
+              className="form-input"
+            />
+          </div>
 
-      <div className="form-group">
-        <label htmlFor="phone">Phone:</label>
-        <input
-          id="phone"
-          type="tel"
-          name="phone"
-          value={formData?.phone || ""}
-          onChange={handleInputChange}
-          className="form-input"
-        />
-      </div>
+          <div className="form-group">
+            <label htmlFor="phone">Phone:</label>
+            <input
+              id="phone"
+              type="tel"
+              name="phone"
+              value={formData?.phone || ""}
+              onChange={handleInputChange}
+              className="form-input"
+            />
+          </div>
 
-      <div className="form-group">
-        <label htmlFor="location">Location:</label>
-        <input
-          id="location"
-          type="text"
-          name="location"
-          value={formData?.location || ""}
-          onChange={handleInputChange}
-          className="form-input"
-        />
-      </div>
+          <div className="form-group">
+            <label htmlFor="location">Location:</label>
+            <input
+              id="location"
+              type="text"
+              name="location"
+              value={formData?.location || ""}
+              onChange={handleInputChange}
+              className="form-input"
+            />
+          </div>
 
-      <div className="form-group">
-        <label htmlFor="birthday">Birthday:</label>
-        <input
-          id="birthday"
-          type="date"
-          name="birthday"
-          value={
-            formData?.birthday ? formatDateForInput(formData.birthday) : ""
-          }
-          onChange={handleInputChange}
-          className="form-input"
-        />
-      </div>
+          <div className="form-group">
+            <label htmlFor="birthday">Birthday:</label>
+            <input
+              id="birthday"
+              type="date"
+              name="birthday"
+              value={
+                formData?.birthday ? formatDateForInput(formData.birthday) : ""
+              }
+              onChange={handleInputChange}
+              className="form-input"
+            />
+          </div>
 
-      <div className="form-group">
-        <label htmlFor="gender">Gender:</label>
-        <select
-          id="gender"
-          name="gender"
-          value={formData?.gender || ""}
-          onChange={handleInputChange}
-          className="form-input"
-        >
-          <option value="">Select gender</option>
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-        </select>
-      </div>
+          <div className="form-group">
+            <label htmlFor="gender">Gender:</label>
+            <select
+              id="gender"
+              name="gender"
+              value={formData?.gender || ""}
+              onChange={handleInputChange}
+              className="form-input"
+            >
+              <option value="">Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </div>
 
-      <div className="button-group">
-        <button type="submit" className="save-button">
-          Save Changes
-        </button>
-        <button
-          type="button"
-          className="cancel-button"
-          onClick={() => {
-            setIsEditing(false);
-          }}
-        >
-          Cancel
-        </button>
-      </div>
-    </form>
+          <div className="button-group">
+            <button type="submit" className="save-button">
+              Save Changes
+            </button>
+            <button
+              type="button"
+              className="cancel-button"
+              onClick={() => setIsEditing(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : (
+        <>
+          {[
+            [
+              "First Name:",
+              userData.firstName || userData.first_name || userData.firstname,
+            ],
+            [
+              "Last Name:",
+              userData.lastName || userData.last_name || userData.lastname,
+            ],
+            ["Email:", userData.email],
+            ["Phone #:", userData.phone],
+            ["Location:", userData.location],
+            ["Birthday:", formatDate(userData.birthday)],
+            ["Gender:", userData.gender],
+          ].map(([label, value]) => (
+            <div key={label} className="detail-row">
+              <span className="detail-label">{label}</span>
+              <span className="detail-value">{value || "N/A"}</span>
+            </div>
+          ))}
+          <button
+            className="modify-button"
+            onClick={() => {
+              setFormData({ ...userData });
+              setIsEditing(true);
+            }}
+          >
+            Modify details
+          </button>
+          <button
+            onClick={handleLogout}
+            className="logout-button"
+            aria-label="Logout"
+          >
+            <LogOut className="logout-icon" />
+            <span>Logout</span>
+          </button>
+        </>
+      )}
+    </>
   );
 
   return (
@@ -251,9 +275,9 @@ const UserPage = () => {
       className="page-container"
       style={{
         width: "100vw",
-        height: "calc(100vh - 8vh)", // Adjust height to account for the nav bar
-        marginTop: "8vh", // Push the container below the nav bar
-        backgroundImage: "url('/images/background.jpeg')", // Uncomment and set the background image if needed
+        height: "calc(100vh - 8vh)",
+        marginTop: "8vh",
+        backgroundImage: "url('/images/background.jpeg')",
         position: "absolute",
         overflow: "hidden",
       }}
@@ -286,9 +310,9 @@ const UserPage = () => {
         <div
           className="details-card"
           style={{
-            backgroundColor: "var(--neutral-1)", // You can replace this with a color value if needed
+            backgroundColor: "var(--neutral-1)",
             borderRadius: "0.5rem",
-            width: "60vw", // Adjust width for proportional scaling
+            width: "60vw",
             height: "86%",
             display: "flex",
             flexDirection: "column",
@@ -311,53 +335,9 @@ const UserPage = () => {
             {error && <div className="error-message">{error}</div>}
             {success && <div className="success-message">{success}</div>}
 
-            {isEditing ? (
-              EditForm
-            ) : (
-              <>
-                {[
-                  [
-                    "First Name:",
-                    userData.firstName ||
-                      userData.first_name ||
-                      userData.firstname,
-                  ],
-                  [
-                    "Last Name:",
-                    userData.lastName ||
-                      userData.last_name ||
-                      userData.lastname,
-                  ],
-                  ["Email:", userData.email],
-                  ["Phone #:", userData.phone],
-                  ["Location:", userData.location],
-                  ["Birthday:", formatDate(userData.birthday)],
-                  ["Gender:", userData.gender],
-                ].map(([label, value]) => (
-                  <div key={label} className="detail-row">
-                    <span className="detail-label">{label}</span>
-                    <span className="detail-value">{value || "N/A"}</span>
-                  </div>
-                ))}
-                <button
-                  className="modify-button"
-                  onClick={() => {
-                    setFormData({ ...userData }); // Populate formData with userData
-                    setIsEditing(true);
-                  }}
-                >
-                  Modify details
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="logout-button"
-                  aria-label="Logout"
-                >
-                  <LogOut className="logout-icon" />
-                  <span>Logout</span>
-                </button>
-              </>
-            )}
+            {activeTab === "Details" && <UserDetailsContent />}
+            {activeTab === "Current events" && <CurrentEventsContent />}
+            {activeTab === "Previous events" && <PreviousEventsContent />}
           </div>
         </div>
       </div>
