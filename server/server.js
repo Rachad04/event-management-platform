@@ -298,7 +298,6 @@ app.listen(port, () => {
 // apis for event dashboard page
 
 // Get current user type
-// Remove the first /api/user route definition and replace with this one
 app.get("/api/user", authenticateToken, async (req, res) => {
   try {
     const userQuery = `
@@ -417,7 +416,7 @@ app.get("/api/companies/:id/events", authenticateToken, async (req, res) => {
     const eventsQuery = `
       SELECT e.event_id, e.event_type, e.date_of_event, e.location, 
              e.capacity, e.description
-      FROM event e
+      FROM events e
       WHERE e.managing_company_id = $1
       ORDER BY e.date_of_event DESC
     `;
@@ -435,7 +434,7 @@ app.get("/api/events/:id/users", authenticateToken, async (req, res) => {
   try {
     const accessCheckQuery = `
       SELECT 1 
-      FROM event e
+      FROM events e
       JOIN managing_company mc ON mc.managing_company_id = e.managing_company_id
       LEFT JOIN users u ON u.user_id = $1
       WHERE e.event_id = $2
@@ -483,7 +482,7 @@ app.post("/api/events/:id/users", authenticateToken, async (req, res) => {
     // Check if user has access to this event's company
     const accessCheckQuery = `
       SELECT 1 
-      FROM event e
+      FROM events e
       JOIN managing_company mc ON mc.managing_company_id = e.managing_company_id
       LEFT JOIN users u ON u.user_id = $1
       WHERE e.event_id = $2
@@ -539,7 +538,7 @@ app.delete(
       // Check if user has access to this event's company
       const accessCheckQuery = `
       SELECT 1 
-      FROM event e
+      FROM events e
       JOIN managing_company mc ON mc.managing_company_id = e.managing_company_id
       LEFT JOIN users u ON u.user_id = $1
       WHERE e.event_id = $2
