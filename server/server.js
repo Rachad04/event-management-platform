@@ -274,25 +274,22 @@ app.post(
   }
 );
 
-// Login Route
 app.post(
   "/api/login",
-  [body("email").isEmail().normalizeEmail(), body("password").exists()],
+  [body("identifier").trim().notEmpty(), body("password").exists()],
   async (req, res) => {
-    // Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    // Extract data
-    const { email, password } = req.body;
+    const { identifier, password } = req.body;
 
     try {
-      // Check if user exists
+      // Check if user exists by email or username
       const user = await pool.query(
-        "SELECT * FROM users WHERE email_address = $1",
-        [email]
+        "SELECT * FROM users WHERE email_address = $1 OR username = $1",
+        [identifier]
       );
 
       if (user.rows.length === 0) {
@@ -300,17 +297,13 @@ app.post(
       }
 
       const existingUser = user.rows[0];
-
-      // Compare passwords
       const isMatch = await bcrypt.compare(password, existingUser.password);
 
       if (!isMatch) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      // Generate token
       const token = generateToken(existingUser);
-
       res.json({ token });
     } catch (error) {
       console.error(error.message);

@@ -6,10 +6,10 @@ import "./LoginPage.css";
 
 function LoginPage() {
   const { login } = useContext(AuthContext);
-  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [formData, setFormData] = useState({ identifier: "", password: "" });
   const [errors, setErrors] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { email, password } = formData;
+  const { identifier, password } = formData;
   const navigate = useNavigate();
 
   const onChange = (e) =>
@@ -21,16 +21,12 @@ function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Login request
       const res = await axios.post("http://localhost:5000/api/login", formData);
-
-      // Wait for login to complete and get user data
       const userData = await login(res.data.token);
 
-      // Store userId and navigate
       if (userData?.id) {
         localStorage.setItem("userId", userData.id);
-        navigate(`/users/user/${userData.id}`, { replace: true });
+        navigate(`/events`, { replace: true });
       } else {
         throw new Error("User ID not found in response");
       }
@@ -66,11 +62,11 @@ function LoginPage() {
             </p>
           ))}
         <div>
-          <label>Email:</label>
+          <label>Email or Username:</label>
           <input
-            type="email"
-            name="email"
-            value={email}
+            type="text"
+            name="identifier"
+            value={identifier}
             onChange={onChange}
             required
             disabled={isLoading}
