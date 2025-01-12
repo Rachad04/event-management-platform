@@ -29,15 +29,7 @@ function App() {
         <Route path="/sign-up" element={<SignUpPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/tickets/:eventId" element={<TicketingPage />} />
-        <Route path="/manager" element={<ManagerPage />} />
-        <Route
-          path="/company-management"
-          element={
-            <ProtectedRoute>
-              <EventDashboardPage />
-            </ProtectedRoute>
-          }
-        />
+
         <Route
           path="/users/user/:user_id"
           element={

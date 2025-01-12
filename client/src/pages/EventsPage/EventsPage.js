@@ -1,114 +1,33 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./EventsPage.css";
 import { Link } from "react-router-dom";
 import noImageIcon from "./Images/no-image.png";
-import beachimage from "./Images/beach-cleanup-image.png";
-
-const events = [
-  {
-    id: 1,
-    title: "BEACH CLEAN UP FOR FAMILY",
-    date: "Mon, November 13, 2023",
-    location: "Public Beach Beirut",
-    tags: ["Activity"],
-    buttonText: "Get Tickets",
-    buttonLink: "/tickets/1",
-    image: beachimage,
-  },
-  {
-    id: 2,
-    title: "Birthday Party Package - Beirut Cultural Tour",
-    date: "Available every day",
-    location: "",
-    tags: ["Activity", "Birthday in Beirut", "Cultural Tour"],
-    buttonText: "Get Tickets",
-    buttonLink: "/tickets/2",
-    image: "",
-  },
-  {
-    id: 3,
-    title: "Birthday Party Package to the Chocolate Museum",
-    date: "Available every day",
-    location: "",
-    tags: ["Activity", "Chocolate Workshop", "Choco Fun"],
-    buttonText: "Get Tickets",
-    buttonLink: "/tickets/3",
-    image: noImageIcon,
-  },
-  {
-    id: 4,
-    title: "BOARD GAMES ACTIVITIES FOR KIDS",
-    date: "Sat, November 30, 2024",
-    location: "+5 dates",
-    tags: ["Activity"],
-    buttonText: "Get Tickets",
-    buttonLink: "/tickets/4",
-    image: "",
-  },
-  {
-    id: 5,
-    title: "BEACH CLEAN UP FOR FAMILY",
-    date: "Mon, November 13, 2023",
-    location: "Public Beach Beirut",
-    tags: ["Activity"],
-    buttonText: "Get Tickets",
-    buttonLink: "/tickets/5",
-    image: beachimage,
-  },
-  {
-    id: 6,
-    title: "Birthday Party Package - Beirut Cultural Tour",
-    date: "Available every day",
-    location: "",
-    tags: ["Activity", "Birthday in Beirut", "Cultural Tour"],
-    buttonText: "Get Tickets",
-    buttonLink: "/tickets/6",
-    image: "",
-  },
-  {
-    id: 7,
-    title: "Birthday Party Package to the Chocolate Museum",
-    date: "Available every day",
-    location: "",
-    tags: ["Activity", "Chocolate Workshop", "Choco Fun"],
-    buttonText: "Get Tickets",
-    buttonLink: "/tickets/7",
-    image: noImageIcon,
-  },
-  {
-    id: 8,
-    title: "BOARD GAMES ACTIVITIES FOR KIDS",
-    date: "Sat, November 30, 2024",
-    location: "+5 dates",
-    tags: ["Activity"],
-    buttonText: "Get Tickets",
-    buttonLink: "/tickets/8",
-    image: "",
-  },
-  {
-    id: 9,
-    title: "BEACH CLEAN UP FOR FAMILY",
-    date: "Mon, November 13, 2023",
-    location: "Public Beach Beirut",
-    tags: ["Activity"],
-    buttonText: "Get Tickets",
-    buttonLink: "/tickets/9",
-    image: beachimage,
-  },
-  {
-    id: 10,
-    title: "Birthday Party Package - Beirut Cultural Tour",
-    date: "Available every day",
-    location: "",
-    tags: ["Activity", "Birthday in Beirut", "Cultural Tour"],
-    buttonText: "Get Tickets",
-    buttonLink: "/tickets/10",
-    image: "",
-  },
-];
 
 const EventsPage = () => {
+  const [events, setEvents] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  const upcomingEventsRef = useRef(null);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/api/events");
+        if (!response.ok) {
+          throw new Error("Failed to fetch events");
+        }
+        const data = await response.json();
+        setEvents(data);
+      } catch (error) {
+        console.error("Error fetching events:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
@@ -117,12 +36,10 @@ const EventsPage = () => {
   const filteredEvents = events.filter(
     (event) =>
       event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.tags.some((tag) =>
+      event.tags?.some((tag) =>
         tag.toLowerCase().includes(searchQuery.toLowerCase())
       )
   );
-
-  const upcomingEventsRef = useRef(null);
 
   const handleScrollToSection = () => {
     if (upcomingEventsRef.current) {
@@ -130,6 +47,9 @@ const EventsPage = () => {
     }
   };
 
+  if (loading) {
+    return <div>Loading events...</div>;
+  }
 
   return (
     <div className="events-page">
@@ -151,9 +71,8 @@ const EventsPage = () => {
 
         {/* Call to Action */}
         <button className="cta-button" onClick={handleScrollToSection}>
-        View Events
-      </button>
-
+          View Events
+        </button>
       </div>
 
       {/* Top Right Buttons */}
@@ -168,47 +87,46 @@ const EventsPage = () => {
 
       {/* Upcoming Events Section */}
       <section id="upcoming-events" ref={upcomingEventsRef}>
-
-
-      <h1 id="upcoming-events" className="events-title">
-        Upcoming Events
-      </h1>
-      <div className="events-container">
-        {filteredEvents.map((event) => (
-          <div className="event-card" key={event.id}>
-            <div className="image-container">
-              <img
-                src={event.image || noImageIcon}
-                alt={event.title}
-                className="event-image"
-              />
-            </div>
-            <div className="event-details">
-              <h2 className="event-title">{event.title}</h2>
-              <p className="event-date">{event.date}</p>
-              {event.location && (
-                <p className="event-location">{event.location}</p>
-              )}
-              <div className="event-tags">
-                {event.tags.map((tag, index) => (
-                  <span className="event-tag" key={`${event.id}-${index}`}>
-                    {tag}
-                  </span>
-                ))}
+        <h1 id="upcoming-events" className="events-title">
+          Upcoming Events
+        </h1>
+        <div className="events-container">
+          {filteredEvents.map((event) => (
+            <div className="event-card" key={event.id}>
+              <div className="image-container">
+                <img
+                  src={event.image || noImageIcon}
+                  alt={event.title}
+                  className="event-image"
+                />
               </div>
-              <button
-                className="event-button"
-                onClick={() => {
-                  window.location.href = event.buttonLink || "#";
-                }}
-              >
-                {event.buttonText}
-              </button>
+              <div className="event-details">
+                <h2 className="event-title">{event.title}</h2>
+                <p className="event-date">{event.date}</p>
+                {event.location && (
+                  <p className="event-location">{event.location}</p>
+                )}
+                <div className="event-tags">
+                  {event.tags?.map((tag, index) => (
+                    <span className="event-tag" key={`${event.id}-${index}`}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <button
+                  className="event-button"
+                  onClick={() => {
+                    window.location.href = `/tickets/${event.id}`;
+                  }}
+                >
+                  Get Tickets
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-        </section>
+          ))}
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="footer">
         <p>&copy; 2024 Evently. All Rights Reserved.</p>
