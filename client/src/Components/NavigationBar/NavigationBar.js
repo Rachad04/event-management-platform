@@ -1,25 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useContext } from "react";
 import { Link } from "react-router-dom";
+import { AuthContext } from "../../Contexts/AuthContext";
 import "./NavigationBar.css";
 
 function NavigationBar() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userId, setUserId] = useState(null);
-  const [userType, setUserType] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(null);
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userId = localStorage.getItem("userId");
-    const userType = localStorage.getItem("userType");
-    const isAdmin = localStorage.getItem("isAdmin");
-    setIsLoggedIn(!!token);
-    setUserId(userId);
-    setUserType(userType);
-    setIsAdmin(isAdmin);
-  }, []);
-
-  const isManagerOrAdmin = isAdmin === true || userType === "company";
+  const { auth } = useContext(AuthContext);
+  const isLoggedIn = !!auth.token && !auth.loading;
+  const isManagerOrAdmin =
+    auth.user?.isAdmin || auth.user?.userType === "company";
 
   return (
     <nav className="navbar">
@@ -47,7 +35,7 @@ function NavigationBar() {
         )}
         {isLoggedIn ? (
           <div>
-            <Link to={`/users/user/${userId}`} className="user-icon">
+            <Link to={`/users/user/${auth.user?.id}`} className="user-icon">
               <img
                 src="/images/user-icon-2-secondary.png"
                 alt="User Icon"
