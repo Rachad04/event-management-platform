@@ -51,6 +51,10 @@ const UserPage = () => {
         const loggedInUserId = localStorage.getItem("userId");
         if (loggedInUserId !== user_id) {
           setError("Unauthorized access");
+          setTimeout(() => {
+            setError("");
+          }, 3000);
+
           setLoading(false);
           return;
         }
@@ -60,6 +64,10 @@ const UserPage = () => {
         setUserData(response.data);
       } catch (err) {
         setError(err.response?.data?.message || "Failed to load user data");
+
+        setTimeout(() => {
+          setError("");
+        }, 3000);
       } finally {
         setLoading(false);
       }
@@ -108,8 +116,17 @@ const UserPage = () => {
 
       // Display success message
       setSuccess("Profile updated successfully!");
+
+      //Hide the success message after 3 seconds
+      setTimeout(() => {
+        setSuccess("");
+      }, 3000);
     } catch (error) {
       setError(error.response?.data?.message || "Failed to update profile");
+
+      setTimeout(() => {
+        setError("");
+      }, 3000);
     }
   };
 
