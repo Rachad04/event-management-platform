@@ -28,6 +28,7 @@ const UserPage = () => {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const { CurrentEventsContent, PreviousEventsContent } = EventsTab();
@@ -54,6 +55,7 @@ const UserPage = () => {
     birthday: useRef(null),
     gender: useRef(null),
   };
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (focusedInput && inputRefs[focusedInput]?.current) {
@@ -134,6 +136,12 @@ const UserPage = () => {
         lastName: userData.lastName || userData.last_name || userData.lastname,
       };
       setFormData(formattedData);
+    } else {
+      // Reset selected image and file input when closing edit mode
+      setSelectedImage(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   }, [isEditing, userData]);
 
@@ -162,41 +170,10 @@ const UserPage = () => {
     }
   };
 
-  const handleImageChange = async (e) => {
-    e.preventDefault();
+  const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    const formData = new FormData();
-    formData.append("profilePicture", file);
-
-    try {
-      setError("");
-      setSuccess("");
-
-      const response = await axiosInstance.post(
-        `/api/users/${user_id}/profile-picture`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      // Update the userData state with new profile picture
-      setUserData((prev) => ({
-        ...prev,
-        profile_picture: response.data.profile_picture,
-      }));
-
-      setSuccess("Profile picture updated successfully!");
-    } catch (error) {
-      console.error("Upload error:", error);
-      setError(
-        error.response?.data?.message || "Failed to upload profile picture"
-      );
-    }
+    setSelectedImage(file);
   };
 
   if (loading) return <div>Loading...</div>;
@@ -225,33 +202,49 @@ const UserPage = () => {
       setError("");
       setSuccess("");
 
-      if (formData.newPassword !== formData.confirmPassword) {
-        setError("New passwords do not match");
-        return;
-      }
-
-      if (formData.newPassword.length < 8) {
-        setError("New password must be at least 8 characters long");
-        return;
-      }
-
       try {
+        // First, update user data
         const response = await axiosInstance.put(
-          `/api/users/${user_id}/password`,
+          `/api/users/${user_id}`,
           formData
         );
-        setSuccess(response.data.message);
-        setFormData({
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-        });
-        // Close modal after successful password change
+
+        // If there's a selected image, upload it
+        if (selectedImage) {
+          const imageFormData = new FormData();
+          imageFormData.append("profilePicture", selectedImage);
+
+          await axiosInstance.post(
+            `/api/users/${user_id}/profile-picture`,
+            imageFormData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+        }
+
+        // Update local state
+        const updatedUserResponse = await axiosInstance.get(
+          `/api/users/${user_id}`
+        );
+        setUserData(updatedUserResponse.data);
+        setFormData(null);
+        setSelectedImage(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        setIsEditing(false);
+        setSuccess("Profile updated successfully!");
         setTimeout(() => {
-          onClose();
-        }, 2000);
-      } catch (err) {
-        setError(err.response?.data?.message || "Failed to change password");
+          setSuccess("");
+        }, 3000);
+      } catch (error) {
+        setError(error.response?.data?.message || "Failed to update profile");
+        setTimeout(() => {
+          setError("");
+        }, 3000);
       }
     };
 
@@ -445,17 +438,22 @@ const UserPage = () => {
             </select>
           </div>
 
-          {/* File input doesn't need focus management */}
           <div className="form-group">
             <label htmlFor="profilePicture">Profile Picture:</label>
             <input
               id="profilePicture"
+              ref={fileInputRef}
               type="file"
               name="profilePicture"
               accept="image/*"
               onChange={handleImageChange}
               className="form-input"
             />
+            {selectedImage && (
+              <span className="selected-file">
+                Selected: {selectedImage.name}
+              </span>
+            )}
           </div>
 
           <div className="button-group">
@@ -532,7 +530,6 @@ const UserPage = () => {
       style={{
         width: "100vw",
         height: "calc(100vh - 8vh)",
-        marginTop: "8vh",
         backgroundImage: "url('/images/background.jpeg')",
         position: "absolute",
         overflow: "hidden",
