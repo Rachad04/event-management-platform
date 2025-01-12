@@ -246,8 +246,20 @@ const UserPage = () => {
             <h2>{userData.username || "Username"}</h2>
           </div>
           <div className="profile-info">
-            <p>First Name: {userData.firstName || "N/A"}</p>
-            <p>Last Name: {userData.lastName || "N/A"}</p>
+            <p>
+              First Name:{" "}
+              {userData.firstName ||
+                userData.first_name ||
+                userData.firstname ||
+                "N/A"}
+            </p>
+            <p>
+              Last Name:{" "}
+              {userData.lastName ||
+                userData.last_name ||
+                userData.lastname ||
+                "N/A"}
+            </p>
             <p>Email: {userData.email || "N/A"}</p>
           </div>
         </div>
@@ -285,8 +297,18 @@ const UserPage = () => {
             ) : (
               <>
                 {[
-                  ["First Name:", userData.firstName],
-                  ["Last Name:", userData.lastName],
+                  [
+                    "First Name:",
+                    userData.firstName ||
+                      userData.first_name ||
+                      userData.firstname,
+                  ],
+                  [
+                    "Last Name:",
+                    userData.lastName ||
+                      userData.last_name ||
+                      userData.lastname,
+                  ],
                   ["Email:", userData.email],
                   ["Phone #:", userData.phone],
                   ["Location:", userData.location],

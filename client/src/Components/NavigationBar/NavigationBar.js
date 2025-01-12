@@ -47,7 +47,7 @@ function NavigationBar() {
           <div>
             <Link to={`/users/user/${userId}`} className="user-icon">
               <img
-                src="/images/user-icon-2.png"
+                src="/images/user-icon-2-secondary.png"
                 alt="User Icon"
                 className="user-image"
               />
