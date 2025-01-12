@@ -246,25 +246,6 @@ app.post(
   }
 );
 
-// Protected Route Example
-app.get("/api/user", authenticateToken, (req, res) => {
-  console.log("Authenticated user:", req.user); // Debugging line
-
-  // Check if req.user is populated correctly
-  if (!req.user || !req.user.id) {
-    return res.status(401).json({ message: "No user authenticated" });
-  }
-
-  // Return a message with authenticated user info
-  res.json({
-    message: `Hello, ${
-      req.user.username || "undefined"
-    }! This is a protected route.`,
-  });
-});
-
-// Add this endpoint to your existing Express server code
-
 app.put("/api/users/:user_id", authenticateToken, async (req, res) => {
   const userId = parseInt(req.params.user_id);
   const { firstName, lastName, phone, location, birthday, gender } = req.body;
@@ -317,6 +298,7 @@ app.listen(port, () => {
 // apis for event dashboard page
 
 // Get current user type
+// Remove the first /api/user route definition and replace with this one
 app.get("/api/user", authenticateToken, async (req, res) => {
   try {
     const userQuery = `
@@ -334,6 +316,7 @@ app.get("/api/user", authenticateToken, async (req, res) => {
       id: user.rows[0].user_id,
       username: user.rows[0].username,
       userType: user.rows[0].user_type,
+      message: `Hello, ${user.rows[0].username}! This is a protected route.`,
     });
   } catch (error) {
     console.error("Error fetching user data:", error.message);
@@ -373,19 +356,33 @@ app.get("/api/companies", authenticateToken, async (req, res) => {
 // Get companies managed by current user
 app.get("/api/companies/managed", authenticateToken, async (req, res) => {
   try {
-    const managedCompaniesQuery = `
-      SELECT DISTINCT mc.managing_company_id, mc.company_name
-      FROM managing_company mc
-      WHERE mc.representative_manager_id = $1 
-      OR EXISTS (
-        SELECT 1 
-        FROM users 
-        WHERE user_id = $1 
-        AND user_type = 'admin'
-      )
-      ORDER BY mc.company_name
+    // First check if user is admin
+    const userTypeQuery = `
+      SELECT is_admin 
+      FROM users 
+      WHERE user_id = $1
     `;
-    const companies = await pool.query(managedCompaniesQuery, [req.user.id]);
+    const userType = await pool.query(userTypeQuery, [req.user.id]);
+
+    // Use different queries based on user type
+    const companiesQuery =
+      userType.rows[0].is_admin === true
+        ? `
+        SELECT DISTINCT mc.managing_company_id, mc.company_name
+        FROM managing_company mc
+        ORDER BY mc.company_name
+      `
+        : `
+        SELECT DISTINCT mc.managing_company_id, mc.company_name
+        FROM managing_company mc
+        WHERE mc.representative_manager_id = $1
+        ORDER BY mc.company_name
+      `;
+
+    const companies = await pool.query(
+      companiesQuery,
+      userType.rows[0].is_admin === true ? [] : [req.user.id]
+    );
 
     res.json(companies.rows);
   } catch (error) {
@@ -405,7 +402,7 @@ app.get("/api/companies/:id/events", authenticateToken, async (req, res) => {
       WHERE mc.managing_company_id = $2
       AND (
         mc.representative_manager_id = $1 
-        OR u.user_type = 'admin'
+        OR u.is_admin = TRUE
       )
     `;
     const accessCheck = await pool.query(accessCheckQuery, [
@@ -444,7 +441,7 @@ app.get("/api/events/:id/users", authenticateToken, async (req, res) => {
       WHERE e.event_id = $2
       AND (
         mc.representative_manager_id = $1 
-        OR u.user_type = 'admin'
+        OR u.is_admin = true
       )
     `;
     const accessCheck = await pool.query(accessCheckQuery, [
@@ -492,7 +489,7 @@ app.post("/api/events/:id/users", authenticateToken, async (req, res) => {
       WHERE e.event_id = $2
       AND (
         mc.representative_manager_id = $1 
-        OR u.user_type = 'admin'
+        OR u.is_admin = true
       )
     `;
     const accessCheck = await pool.query(accessCheckQuery, [
@@ -548,7 +545,7 @@ app.delete(
       WHERE e.event_id = $2
       AND (
         mc.representative_manager_id = $1 
-        OR u.user_type = 'admin'
+        OR u.is_admin = true
       )
     `;
       const accessCheck = await pool.query(accessCheckQuery, [
