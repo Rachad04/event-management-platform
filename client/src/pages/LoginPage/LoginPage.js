@@ -49,14 +49,22 @@ function LoginPage() {
 
   return (
     <div className="login-page">
-      <h2>Login</h2>
-      {errors.length > 0 &&
-        errors.map((error, index) => (
-          <p key={index} className="error-message">
-            {error.msg}
-          </p>
-        ))}
       <form className="login-form" onSubmit={onSubmit}>
+        <h2
+          style={{
+            textAlign: "center",
+            marginBottom: "2rem",
+            fontFamily: "roboto",
+          }}
+        >
+          Login
+        </h2>
+        {errors.length > 0 &&
+          errors.map((error, index) => (
+            <p key={index} className="error-message">
+              {error.msg}
+            </p>
+          ))}
         <div>
           <label>Email:</label>
           <input
@@ -86,9 +94,29 @@ function LoginPage() {
         >
           {isLoading ? "Logging in..." : "Login"}
         </button>
-        <Link to="/forgot-password" className="forgot-password-link">
-          Forgot your password?
-        </Link>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-around",
+            alignItems: "center",
+            flexDirection: "column",
+          }}
+        >
+          <Link
+            to="/sign-up"
+            className="forgot-password-link"
+            style={{ textAlign: "end", marginTop: "0.5rem" }}
+          >
+            Don't have an account? Sign up
+          </Link>
+          <Link
+            to="/forgot-password"
+            className="forgot-password-link"
+            style={{ textAlign: "end", marginTop: "0.5rem" }}
+          >
+            Forgot password
+          </Link>
+        </div>
       </form>
     </div>
   );

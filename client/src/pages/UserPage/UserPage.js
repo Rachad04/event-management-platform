@@ -283,6 +283,30 @@ const UserPage = () => {
           </div>
 
           <div className="form-group">
+            <label htmlFor="username">Username:</label>
+            <input
+              id="username"
+              type="text"
+              name="username"
+              value={formData?.username || ""}
+              onChange={handleInputChange}
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="email">Email:</label>
+            <input
+              id="email"
+              type="email"
+              name="email"
+              value={formData?.email || ""}
+              onChange={handleInputChange}
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-group">
             <label htmlFor="phone">Phone:</label>
             <input
               id="phone"

@@ -8,6 +8,10 @@ body {
   color: var(--charcoal);
 }
 
+.homepage {
+  padding-top: 8vh;
+}
+
 .header {
   height: 3rem;
   width: 98vw;
