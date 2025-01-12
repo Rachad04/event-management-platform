@@ -47,6 +47,7 @@ const EventDashboardPage = () => {
   });
   const [error, setError] = useState("");
   const [addUserError, setAddUserError] = useState("");
+  const [removeUserError, setRemoveUserError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
   // Fetch initial data
@@ -151,6 +152,7 @@ const EventDashboardPage = () => {
     async (email) => {
       if (!email.trim()) {
         setSearchResults([]);
+        setAddUserError(""); // Clear error when search is empty
         return;
       }
 
@@ -223,6 +225,7 @@ const EventDashboardPage = () => {
       setTotalUsers((prev) => prev + 1);
       setSearchEmail("");
       setSearchResults([]);
+      setAddUserError(""); // Clear error after successful addition
       setSuccessMessage("User added successfully");
 
       setTimeout(() => setSuccessMessage(""), 3000);
@@ -242,11 +245,13 @@ const EventDashboardPage = () => {
         prev.filter((user) => user.user_id !== userId)
       );
       setTotalUsers((prev) => prev - 1);
-      setSuccessMessage("User removed successfully");
+      setRemoveUserError("User removed successfully");
 
-      setTimeout(() => setSuccessMessage(""), 3000);
+      setTimeout(() => setRemoveUserError(""), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to remove user");
+      setRemoveUserError(
+        err.response?.data?.message || "Failed to remove user"
+      );
     }
   };
 
@@ -383,6 +388,9 @@ const EventDashboardPage = () => {
             <div className="users-card">
               <div className="users-header">
                 <h2>Event Attendees</h2>
+                {removeUserError && ( // Add error message for user removal at the top
+                  <MessageAlert message={removeUserError} type="error" />
+                )}
                 <div className="search-container">
                   <input
                     type="text"
