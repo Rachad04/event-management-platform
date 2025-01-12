@@ -1,90 +1,83 @@
-.page-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  background-color: var(--secondary);
-  color: var(--primary);
-}
-
 .content-wrapper {
   display: flex;
-  gap: 4rem;
+  gap: 4rem; /* Adjust gap to scale appropriately */
   width: 100%;
-  max-width: 1600px;
-  height: 75vh;
+  max-width: 1200px; /* Adjust max-width for better fit */
+  height: 100%; /* Use full height of the adjusted container */
+  position: relative;
+  justify-content: center;
+  align-items: center;
 }
 
 .profile-card {
   background-color: var(--neutral-1);
   border-radius: 0.5rem;
-  padding: 2rem;
-  width: 22vw;
-  height: 100% - 2rem;
+  padding: 2rem; /* Adjust padding for balance */
+  width: 16vw; /* Adjust width proportionally */
+  height: calc(100% - 5rem);
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .profile-header {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 1.5rem; /* Reduce gap slightly */
   flex: 1;
 }
 
 .profile-picture {
-  width: 12rem;
-  height: 12rem;
+  width: 10rem; /* Reduce size proportionally */
+  height: 10rem;
   background-color: var(--neutral-2);
   border-radius: 50%;
-  margin-bottom: 2.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2rem;
+  color: var(--primary);
+  text-transform: uppercase;
 }
 
 .profile-header h2 {
-  font-size: 1.8rem;
+  font-size: 1.6rem; /* Reduce font size */
   color: var(--primary);
-  margin-bottom: 2.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .profile-info {
   border-top: 1px solid var(--neutral-2);
-  padding-top: 2rem;
+  padding-top: 1.5rem;
   text-align: left;
   flex: 1;
 }
 
 .profile-info p {
-  margin: 1.25rem 0;
-  font-size: 1.2rem;
+  margin: 1rem 0;
+  font-size: 1rem;
   color: var(--primary);
 }
 
 /* Details Card (Right Section) */
-.details-card {
-  background-color: var(--neutral-1);
-  border-radius: 0.5rem;
-  width: 65vw;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
 
 .tabs {
   display: flex;
   justify-content: center;
-  gap: 4rem;
-  padding: 1.5rem 2rem;
+  gap: 3rem; /* Adjust gap for balance */
+  padding: 1rem;
   border-bottom: 1px solid var(--neutral-2);
 }
 
 .tab {
-  padding: 0.5rem 1rem;
+  padding: 0 1rem;
   background: none;
   border: none;
   color: var(--primary);
   cursor: pointer;
   position: relative;
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: 500;
 }
 
@@ -95,7 +88,7 @@
 .tab.active::after {
   content: "";
   position: absolute;
-  bottom: -1.5rem;
+  bottom: -1rem;
   left: 0;
   right: 0;
   height: 2px;
@@ -103,16 +96,17 @@
 }
 
 .details-content {
-  padding: 3rem;
+  padding: 2rem;
   position: relative;
   flex: 1;
+  overflow-y: auto;
 }
 
 .detail-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 2.5rem;
-  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
 }
 
 .detail-label {
@@ -125,19 +119,62 @@
 
 .modify-button {
   position: absolute;
-  bottom: 2rem;
-  right: 2rem;
-  padding: 0.75rem 1.5rem;
+  right: 1.5rem;
+  padding: 10px 16px;
   background-color: var(--urgent);
   color: white;
   border: none;
-  border-radius: 0.25rem;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 1rem;
 }
 
 .modify-button:hover {
   opacity: 0.9;
+}
+
+.logout-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  background-color: var(--errors);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  position: absolute;
+  transition: background-color 0.2s;
+  right: 10rem;
+}
+
+.logout-button:hover {
+  background-color: #dc2626;
+}
+
+.change-password-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  background-color: var(--success);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  position: absolute;
+  transition: background-color 0.2s;
+  left: 2rem;
+}
+
+.change-password-button:hover {
+  background-color: #1f9c05;
+}
+
+.logout-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
 }
 
 .edit-form {
@@ -156,6 +193,7 @@
   padding: 0.5rem;
   border: 1px solid #ccc;
   border-radius: 4px;
+  font-size: 1rem;
 }
 
 .button-group {
@@ -178,17 +216,123 @@
 }
 
 .cancel-button {
-  background-color: #f44336;
+  background-color: var(--errors);
   color: white;
   border: none;
 }
 
 .error-message {
-  color: #f44336;
+  color: var(--errors);
   margin-bottom: 1rem;
 }
 
 .success-message {
-  color: #4caf50;
+  color: var(--success);
   margin-bottom: 1rem;
+}
+
+.section-divider {
+  margin: 2rem 0;
+  border-top: 1px solid var(--neutral-3);
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.modal-header h3 {
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  color: #666;
+}
+
+.modal-close:hover {
+  color: #333;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+/* Ensure modal form inputs match your existing styles */
+.modal-content .form-input {
+  width: 100%;
+}
+
+/* Animation for modal appearance */
+@keyframes modalFade {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-content {
+  animation: modalFade 0.3s ease-out;
+}
+
+@media (max-width: 768px) {
+  .content-wrapper {
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .profile-card,
+  .details-card {
+    width: 90%;
+    height: auto;
+  }
+
+  .tabs {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .tab {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.9rem;
+  }
 }

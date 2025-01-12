@@ -6,19 +6,30 @@ import HomePage from "./pages/HomePage/HomePage";
 import UserPage from "./pages/UserPage/UserPage";
 import LoginPage from "./pages/LoginPage/LoginPage";
 import SignUpPage from "./pages/SignUpPage/SignUpPage";
-import EventsPage  from "./pages/EventsPage/EventsPage";
+import EventsPage from "./pages/EventsPage/EventsPage";
 import TicketingPage from "./pages/TicketingPage/TicketingPage";
+import ManagerPage from "./pages/ManagerPage/ManagerPage";
 import ProtectedRoute from "./Components/ProtectedRoute";
+import NavigationBar from "./Components/NavigationBar/NavigationBar";
+import EventDashboardPage from "./pages/EventDashboardPage/EventDashboardPage";
+import Page404 from "./pages/Page404/Page404";
+import {
+  ForgotPassword,
+  ResetPassword,
+} from "./Components/ForgotPassword/ForgotPassword";
 
 function App() {
   return (
     <BrowserRouter>
+      <NavigationBar />
       <Routes>
         <Route exact path="/" element={<HomePage />} />
+        <Route exact path="*" element={<Page404 />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/sign-up" element={<SignUpPage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/tickets/:eventId" element={<TicketingPage />} />
+
         <Route
           path="/users/user/:user_id"
           element={
@@ -27,6 +38,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
       </Routes>
     </BrowserRouter>
   );

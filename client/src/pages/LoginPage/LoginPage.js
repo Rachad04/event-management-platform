@@ -1,55 +1,58 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext } from "react";
 import axios from "axios";
 import { AuthContext } from "../../Contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import "./LoginPage.css";
 
 function LoginPage() {
-  const { auth, login } = useContext(AuthContext);
+  const { login } = useContext(AuthContext);
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const { email, password } = formData;
   const navigate = useNavigate();
 
-  // Handle form input changes
   const onChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  // Handle form submission
   const onSubmit = async (e) => {
     e.preventDefault();
     setErrors([]);
+    setIsLoading(true);
 
     try {
+      // Login request
       const res = await axios.post("http://localhost:5000/api/login", formData);
-      login(res.data.token); // Log the user in and store the token
-      localStorage.setItem("userId", res.data.user.id);
+
+      // Wait for login to complete and get user data
+      const userData = await login(res.data.token);
+
+      // Store userId and navigate
+      if (userData?.id) {
+        localStorage.setItem("userId", userData.id);
+        navigate(`/users/user/${userData.id}`, { replace: true });
+      } else {
+        throw new Error("User ID not found in response");
+      }
     } catch (error) {
-      if (error.response && error.response.data) {
+      console.error("Login error:", error);
+      setIsLoading(false);
+      if (error.response?.data) {
         setErrors(
           error.response.data.errors || [{ msg: error.response.data.message }]
         );
       } else {
-        setErrors([{ msg: "Server error" }]);
+        setErrors([{ msg: "Server error. Please try again." }]);
       }
     }
   };
-
-  // Use useEffect to watch the auth state and navigate when user is set
-  useEffect(() => {
-    if (auth.user && auth.user.id) {
-      navigate(`/users/user/${auth.user.id}`);
-    } else {
-      console.log("User ID is undefined");
-    }
-  }, [auth.user, navigate]);
 
   return (
     <div className="login-page">
       <h2>Login</h2>
       {errors.length > 0 &&
         errors.map((error, index) => (
-          <p key={index} style={{ color: "red" }}>
+          <p key={index} className="error-message">
             {error.msg}
           </p>
         ))}
@@ -62,6 +65,7 @@ function LoginPage() {
             value={email}
             onChange={onChange}
             required
+            disabled={isLoading}
           />
         </div>
         <div>
@@ -72,11 +76,19 @@ function LoginPage() {
             value={password}
             onChange={onChange}
             required
+            disabled={isLoading}
           />
         </div>
-        <button className="login-button" type="submit">
-          Login
+        <button
+          className={`login-button ${isLoading ? "loading" : ""}`}
+          type="submit"
+          disabled={isLoading}
+        >
+          {isLoading ? "Logging in..." : "Login"}
         </button>
+        <Link to="/forgot-password" className="forgot-password-link">
+          Forgot your password?
+        </Link>
       </form>
     </div>
   );

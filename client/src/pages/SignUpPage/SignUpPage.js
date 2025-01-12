@@ -15,7 +15,7 @@ function SignUpPage() {
     password2: "",
   });
   const [errors, setErrors] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { email, userType, password, password2 } = formData;
 
   const onChange = (e) =>
@@ -24,31 +24,48 @@ function SignUpPage() {
   const onSubmit = async (e) => {
     e.preventDefault();
     setErrors([]);
-    setLoading(true);
+    setIsLoading(true);
+
+    // Validate passwords match
+    if (password !== password2) {
+      setErrors([{ msg: "Passwords do not match" }]);
+      setIsLoading(false);
+      return;
+    }
+
+    // Validate user type is selected
+    if (!userType) {
+      setErrors([{ msg: "Please select a user type" }]);
+      setIsLoading(false);
+      return;
+    }
 
     try {
+      // Sign up request
       const res = await axios.post(
         "http://localhost:5000/api/signup",
         formData
       );
 
-      login(res.data.token); // Persist token
-      localStorage.setItem("userId", res.data.user.id); // Ensure user ID is stored
+      // Wait for login to complete and get user data
+      const userData = await login(res.data.token);
 
-      // Wait briefly to ensure token is available
-      setTimeout(() => {
-        navigate(`/users/user/${res.data.user.id}`);
-      }, 100); // Adjust delay if needed
+      if (userData?.id) {
+        localStorage.setItem("userId", userData.id);
+        navigate(`/users/user/${userData.id}`, { replace: true });
+      } else {
+        throw new Error("User ID not found in response");
+      }
     } catch (error) {
-      if (error.response && error.response.data) {
+      console.error("Signup error:", error);
+      if (error.response?.data) {
         setErrors(
           error.response.data.errors || [{ msg: error.response.data.message }]
         );
       } else {
-        setErrors([{ msg: "Server error" }]);
+        setErrors([{ msg: "Server error. Please try again." }]);
       }
-    } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -57,7 +74,7 @@ function SignUpPage() {
       <h2>Sign Up</h2>
       {errors.length > 0 &&
         errors.map((error, index) => (
-          <p key={index} style={{ color: "red" }}>
+          <p key={index} className="error-message">
             {error.msg}
           </p>
         ))}
@@ -70,6 +87,7 @@ function SignUpPage() {
             value={email}
             onChange={onChange}
             required
+            disabled={isLoading}
           />
         </div>
         <div>
@@ -80,6 +98,8 @@ function SignUpPage() {
             value={password}
             onChange={onChange}
             required
+            disabled={isLoading}
+            minLength="6"
           />
         </div>
         <div>
@@ -90,19 +110,31 @@ function SignUpPage() {
             value={password2}
             onChange={onChange}
             required
+            disabled={isLoading}
+            minLength="6"
           />
         </div>
         <div>
           <label htmlFor="userType">User Type:</label>
-          <select value={userType} onChange={onChange} name="userType">
+          <select
+            value={userType}
+            onChange={onChange}
+            name="userType"
+            required
+            disabled={isLoading}
+          >
             <option value="">Select Type</option>
             <option value="user">Person</option>
             <option value="company">Company</option>
             <option value="sponsor">Sponsor</option>
           </select>
         </div>
-        <button className="sign-up-button" type="submit" disabled={loading}>
-          {loading ? "Signing Up..." : "Sign Up"}
+        <button
+          className={`sign-up-button ${isLoading ? "loading" : ""}`}
+          type="submit"
+          disabled={isLoading}
+        >
+          {isLoading ? "Signing Up..." : "Sign Up"}
         </button>
       </form>
     </div>
