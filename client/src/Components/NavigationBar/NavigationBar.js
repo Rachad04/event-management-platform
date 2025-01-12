@@ -24,7 +24,9 @@ function NavigationBar() {
   return (
     <nav className="navbar">
       <div className="navbar-logo">
-        <img src="/logo-icon.png" alt="Logo" />
+        <Link to="/">
+          <img src="/logo-icon.png" alt="Logo" />
+        </Link>
       </div>
       <ul className="navbar-links">
         <li>
