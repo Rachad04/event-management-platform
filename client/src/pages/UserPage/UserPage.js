@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import React, { useState, useEffect, useCallback, useContext } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { LogOut } from "lucide-react";
 import axios from "axios";
+import { AuthContext } from "./../../Contexts/AuthContext";
 import "./UserPage.css";
 
 const axiosInstance = axios.create({
@@ -18,6 +20,8 @@ axiosInstance.interceptors.request.use((config) => {
 
 const UserPage = () => {
   const { user_id } = useParams();
+  const navigate = useNavigate();
+  const { logout } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState("Details");
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,6 +38,11 @@ const UserPage = () => {
       [name]: value,
     }));
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   // Fetch user data
   useEffect(() => {
@@ -202,7 +211,17 @@ const UserPage = () => {
   );
 
   return (
-    <div className="page-container">
+    <div
+      className="page-container"
+      style={{
+        width: "100vw",
+        height: "calc(100vh - 8vh)", // Adjust height to account for the nav bar
+        marginTop: "8vh", // Push the container below the nav bar
+        backgroundImage: "url('/images/background.jpeg')", // Uncomment and set the background image if needed
+        position: "absolute",
+        overflow: "hidden",
+      }}
+    >
       <div className="content-wrapper">
         <div className="profile-card">
           <div className="profile-header">
@@ -216,7 +235,18 @@ const UserPage = () => {
           </div>
         </div>
 
-        <div className="details-card">
+        <div
+          className="details-card"
+          style={{
+            backgroundColor: "var(--neutral-1)", // You can replace this with a color value if needed
+            borderRadius: "0.5rem",
+            width: "60vw", // Adjust width for proportional scaling
+            height: "86%",
+            display: "flex",
+            flexDirection: "column",
+            padding: "2rem",
+          }}
+        >
           <div className="tabs">
             {["Details", "Current events", "Previous events"].map((tab) => (
               <button
@@ -259,6 +289,14 @@ const UserPage = () => {
                   }}
                 >
                   Modify details
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="logout-button"
+                  aria-label="Logout"
+                >
+                  <LogOut className="logout-icon" />
+                  <span>Logout</span>
                 </button>
               </>
             )}

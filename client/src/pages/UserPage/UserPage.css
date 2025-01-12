@@ -1,13 +1,3 @@
-.page-container {
-  width: 100vw;
-  height: calc(100vh - 8vh); /* Adjust height to account for the nav bar */
-  margin-top: 8vh; /* Push the container below the nav bar */
-  /* background-image: url("/images/background.jpeg"); */
-  color: var(--primary);
-  position: absolute;
-  overflow: hidden;
-}
-
 .content-wrapper {
   display: flex;
   gap: 4rem; /* Adjust gap to scale appropriately */
@@ -71,15 +61,6 @@
 }
 
 /* Details Card (Right Section) */
-.details-card {
-  background-color: var(--neutral-1);
-  border-radius: 0.5rem;
-  width: 48vw; /* Adjust width for proportional scaling */
-  height: calc(100% - 5rem);
-  display: flex;
-  flex-direction: column;
-  padding: 2rem;
-}
 
 .tabs {
   display: flex;
@@ -138,19 +119,43 @@
 
 .modify-button {
   position: absolute;
-  bottom: 1.5rem;
   right: 1.5rem;
-  padding: 0.5rem 1rem;
+  padding: 10px 16px;
   background-color: var(--urgent);
   color: white;
   border: none;
-  border-radius: 0.25rem;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 1rem;
 }
 
 .modify-button:hover {
   opacity: 0.9;
+}
+
+.logout-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  position: absolute;
+  transition: background-color 0.2s;
+  right: 10rem;
+}
+
+.logout-button:hover {
+  background-color: #dc2626;
+}
+
+.logout-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
 }
 
 .edit-form {
