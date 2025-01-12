@@ -165,8 +165,8 @@ app.get("/api/users/:id", authenticateToken, async (req, res) => {
     }
 
     const userQuery = `
-      SELECT user_id, first_name, last_name, phone_number AS phone, 
-             location, birthday, gender, email_address AS email 
+      SELECT user_id, username, first_name, last_name, phone_number AS phone, 
+             location, birthday, gender, email_address AS email, profile_picture
       FROM users 
       WHERE user_id = $1
     `;

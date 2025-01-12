@@ -39,10 +39,14 @@ const UserPage = () => {
   const { auth } = useContext(AuthContext);
 
   const profilePictureUrl = useMemo(() => {
-    return auth.user?.profile_picture
-      ? `http://localhost:5000${auth.user.profile_picture}`
-      : "/images/user-icon-2-secondary.png";
-  }, [auth.user?.profile_picture]);
+    if (!userData?.profile_picture) {
+      return "/images/user-icon-2-secondary.png";
+    }
+    // Handle both absolute and relative URLs
+    return userData.profile_picture.startsWith("http")
+      ? userData.profile_picture
+      : `http://localhost:5000${userData.profile_picture}`;
+  }, [userData?.profile_picture]);
 
   // refs for each input field
   const inputRefs = {
@@ -544,6 +548,11 @@ const UserPage = () => {
                 backgroundImage: `url(${profilePictureUrl})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
+                backgroundColor: "#f0f0f0", // Fallback color
+                border: "1px solid #ddd",
+                width: "150px", // Explicit dimensions
+                height: "150px",
+                borderRadius: "50%",
               }}
             />
             <h2>
