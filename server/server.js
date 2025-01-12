@@ -393,7 +393,6 @@ app.get("/api/companies/managed", authenticateToken, async (req, res) => {
 // Get events for a specific company
 app.get("/api/companies/:id/events", authenticateToken, async (req, res) => {
   try {
-    // First check if user has access to this company
     const accessCheckQuery = `
       SELECT 1 
       FROM managing_company mc
@@ -414,11 +413,22 @@ app.get("/api/companies/:id/events", authenticateToken, async (req, res) => {
     }
 
     const eventsQuery = `
-      SELECT e.event_id, e.event_type, e.date_of_event, e.location, 
-             e.capacity, e.description
-      FROM events e
-      WHERE e.managing_company_id = $1
-      ORDER BY e.date_of_event DESC
+      SELECT 
+        event_id,
+        title,
+        description,
+        date,
+        location,
+        image_url,
+        price,
+        quantity,
+        banner,
+        event_type,
+        capacity,
+        created_at
+      FROM events
+      WHERE managing_company_id = $1
+      ORDER BY date DESC, created_at DESC
     `;
     const events = await pool.query(eventsQuery, [req.params.id]);
 
@@ -458,11 +468,12 @@ app.get("/api/events/:id/users", authenticateToken, async (req, res) => {
         u.first_name,
         u.last_name,
         u.email_address,
-        u.phone_number
+        u.phone_number,
+        p.purchase_date
       FROM users u
       JOIN purchases p ON p.user_id = u.user_id
       WHERE p.event_id = $1
-      ORDER BY u.last_name, u.first_name
+      ORDER BY p.purchase_date DESC
     `;
     const users = await pool.query(usersQuery, [req.params.id]);
 
@@ -481,7 +492,7 @@ app.post("/api/events/:id/users", authenticateToken, async (req, res) => {
   try {
     // Check if user has access to this event's company
     const accessCheckQuery = `
-      SELECT 1 
+      SELECT e.quantity
       FROM events e
       JOIN managing_company mc ON mc.managing_company_id = e.managing_company_id
       LEFT JOIN users u ON u.user_id = $1
@@ -500,6 +511,11 @@ app.post("/api/events/:id/users", authenticateToken, async (req, res) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
+    const event = accessCheck.rows[0];
+    if (event.quantity <= 0) {
+      return res.status(400).json({ message: "Event is sold out" });
+    }
+
     // Check if user is already in the event
     const existingUserQuery = `
       SELECT 1 FROM purchases
@@ -513,14 +529,33 @@ app.post("/api/events/:id/users", authenticateToken, async (req, res) => {
         .json({ message: "User already added to this event" });
     }
 
-    // Add user to event
-    const insertQuery = `
-      INSERT INTO purchases (event_id, user_id, purchase_date)
-      VALUES ($1, $2, CURRENT_TIMESTAMP)
-    `;
-    await pool.query(insertQuery, [eventId, userId]);
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
 
-    res.json({ message: "User added successfully" });
+      // Add user to event
+      const insertQuery = `
+        INSERT INTO purchases (event_id, user_id, purchase_date)
+        VALUES ($1, $2, CURRENT_TIMESTAMP)
+      `;
+      await client.query(insertQuery, [eventId, userId]);
+
+      // Update event quantity
+      const updateQuery = `
+        UPDATE events
+        SET quantity = quantity - 1
+        WHERE event_id = $1
+      `;
+      await client.query(updateQuery, [eventId]);
+
+      await client.query("COMMIT");
+      res.json({ message: "User added successfully" });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   } catch (error) {
     console.error("Error adding user to event:", error.message);
     res.status(500).json({ message: "Server error" });
@@ -534,7 +569,10 @@ app.delete(
   async (req, res) => {
     const { eventId, userId } = req.params;
 
+    const client = await pool.connect();
     try {
+      await client.query("BEGIN");
+
       // Check if user has access to this event's company
       const accessCheckQuery = `
       SELECT 1 
@@ -553,6 +591,7 @@ app.delete(
       ]);
 
       if (accessCheck.rows.length === 0) {
+        await client.query("ROLLBACK");
         return res.status(403).json({ message: "Access denied" });
       }
 
@@ -561,12 +600,24 @@ app.delete(
       DELETE FROM purchases
       WHERE event_id = $1 AND user_id = $2
     `;
-      await pool.query(deleteQuery, [eventId, userId]);
+      await client.query(deleteQuery, [eventId, userId]);
 
+      // Update event quantity
+      const updateQuery = `
+      UPDATE events
+      SET quantity = quantity + 1
+      WHERE event_id = $1
+    `;
+      await client.query(updateQuery, [eventId]);
+
+      await client.query("COMMIT");
       res.json({ message: "User removed successfully" });
     } catch (error) {
+      await client.query("ROLLBACK");
       console.error("Error removing user from event:", error.message);
       res.status(500).json({ message: "Server error" });
+    } finally {
+      client.release();
     }
   }
 );
