@@ -44,6 +44,23 @@ const UserPage = () => {
     navigate("/login");
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return "";
+
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-CA"); // Returns YYYY-MM-DD format in local timezone
+  };
+
   // Fetch user data
   useEffect(() => {
     const fetchUserData = async () => {
@@ -189,7 +206,9 @@ const UserPage = () => {
           id="birthday"
           type="date"
           name="birthday"
-          value={formData?.birthday || ""}
+          value={
+            formData?.birthday ? formatDateForInput(formData.birthday) : ""
+          }
           onChange={handleInputChange}
           className="form-input"
         />
@@ -312,7 +331,7 @@ const UserPage = () => {
                   ["Email:", userData.email],
                   ["Phone #:", userData.phone],
                   ["Location:", userData.location],
-                  ["Birthday:", userData.birthday],
+                  ["Birthday:", formatDate(userData.birthday)],
                   ["Gender:", userData.gender],
                 ].map(([label, value]) => (
                   <div key={label} className="detail-row">
