@@ -7,6 +7,9 @@ const jwt = require("jsonwebtoken");
 const { body, validationResult } = require("express-validator");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 
 dotenv.config();
 
@@ -901,6 +904,82 @@ app.get("/api/users/:id/events", authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// storing the profile picture image
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(__dirname, "public/uploads/profiles");
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, `profile-${uniqueSuffix}${path.extname(file.originalname)}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5000000 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    const filetypes = /jpeg|jpg|png|webp/;
+    const extname = filetypes.test(
+      path.extname(file.originalname).toLowerCase()
+    );
+    const mimetype = filetypes.test(file.mimetype);
+
+    if (extname && mimetype) {
+      return cb(null, true);
+    }
+    cb(new Error("Only images are allowed"));
+  },
+});
+
+app.post(
+  "/api/users/:id/profile-picture",
+  authenticateToken,
+  upload.single("profilePicture"),
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    try {
+      // Get the relative path for storage in database
+      const relativePath = `/uploads/profiles/${path.basename(req.file.path)}`;
+
+      const updateQuery = `
+      UPDATE users 
+      SET profile_picture = $1 
+      WHERE user_id = $2 
+      RETURNING profile_picture
+    `;
+
+      const result = await pool.query(updateQuery, [
+        relativePath,
+        req.params.id,
+      ]);
+
+      res.json({ profile_picture: result.rows[0].profile_picture });
+    } catch (error) {
+      // Delete uploaded file if database update fails
+      if (req.file.path) {
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error("Error deleting file:", err);
+        });
+      }
+      console.error("Error uploading profile picture:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  }
+);
+
+// Add this to serve static files
+app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 
 app.listen(port, async () => {
   await initDatabase();

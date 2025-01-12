@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useContext } from "react";
+import React, { useState, useEffect, useRef, useContext, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import axios from "axios";
@@ -32,15 +32,48 @@ const UserPage = () => {
   const [success, setSuccess] = useState("");
   const { CurrentEventsContent, PreviousEventsContent } = EventsTab();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  // Keep track of which input is currently focused
+  const [focusedInput, setFocusedInput] = useState(null);
 
-  // Keep existing helper functions and effects...
-  const handleInputChange = useCallback((e) => {
+  const { auth } = useContext(AuthContext);
+
+  const profilePictureUrl = useMemo(() => {
+    return auth.user?.profile_picture
+      ? `http://localhost:5000${auth.user.profile_picture}`
+      : "/images/user-icon-2-secondary.png";
+  }, [auth.user?.profile_picture]);
+
+  // refs for each input field
+  const inputRefs = {
+    firstName: useRef(null),
+    lastName: useRef(null),
+    username: useRef(null),
+    email: useRef(null),
+    phone: useRef(null),
+    location: useRef(null),
+    birthday: useRef(null),
+    gender: useRef(null),
+  };
+
+  useEffect(() => {
+    if (focusedInput && inputRefs[focusedInput]?.current) {
+      const input = inputRefs[focusedInput].current;
+      const cursorPosition = input.selectionStart;
+      input.focus();
+      // Restore cursor position
+      input.setSelectionRange(cursorPosition, cursorPosition);
+    }
+  }, [formData, focusedInput]);
+
+  // helper functions
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
+    setFocusedInput(name);
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
-  }, []);
+  };
 
   const handleLogout = () => {
     logout();
@@ -126,6 +159,43 @@ const UserPage = () => {
       setTimeout(() => {
         setError("");
       }, 3000);
+    }
+  };
+
+  const handleImageChange = async (e) => {
+    e.preventDefault();
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("profilePicture", file);
+
+    try {
+      setError("");
+      setSuccess("");
+
+      const response = await axiosInstance.post(
+        `/api/users/${user_id}/profile-picture`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      // Update the userData state with new profile picture
+      setUserData((prev) => ({
+        ...prev,
+        profile_picture: response.data.profile_picture,
+      }));
+
+      setSuccess("Profile picture updated successfully!");
+    } catch (error) {
+      console.error("Upload error:", error);
+      setError(
+        error.response?.data?.message || "Failed to upload profile picture"
+      );
     }
   };
 
@@ -262,11 +332,13 @@ const UserPage = () => {
             <label htmlFor="firstName">First Name:</label>
             <input
               id="firstName"
+              ref={inputRefs.firstName}
               type="text"
               name="firstName"
               value={formData?.firstName || ""}
               onChange={handleInputChange}
               className="form-input"
+              onFocus={() => setFocusedInput("firstName")}
             />
           </div>
 
@@ -274,11 +346,13 @@ const UserPage = () => {
             <label htmlFor="lastName">Last Name:</label>
             <input
               id="lastName"
+              ref={inputRefs.lastName}
               type="text"
               name="lastName"
               value={formData?.lastName || ""}
               onChange={handleInputChange}
               className="form-input"
+              onFocus={() => setFocusedInput("lastName")}
             />
           </div>
 
@@ -286,11 +360,13 @@ const UserPage = () => {
             <label htmlFor="username">Username:</label>
             <input
               id="username"
+              ref={inputRefs.username}
               type="text"
               name="username"
               value={formData?.username || ""}
               onChange={handleInputChange}
               className="form-input"
+              onFocus={() => setFocusedInput("username")}
             />
           </div>
 
@@ -298,11 +374,13 @@ const UserPage = () => {
             <label htmlFor="email">Email:</label>
             <input
               id="email"
+              ref={inputRefs.email}
               type="email"
               name="email"
               value={formData?.email || ""}
               onChange={handleInputChange}
               className="form-input"
+              onFocus={() => setFocusedInput("email")}
             />
           </div>
 
@@ -310,11 +388,13 @@ const UserPage = () => {
             <label htmlFor="phone">Phone:</label>
             <input
               id="phone"
+              ref={inputRefs.phone}
               type="tel"
               name="phone"
               value={formData?.phone || ""}
               onChange={handleInputChange}
               className="form-input"
+              onFocus={() => setFocusedInput("phone")}
             />
           </div>
 
@@ -322,11 +402,13 @@ const UserPage = () => {
             <label htmlFor="location">Location:</label>
             <input
               id="location"
+              ref={inputRefs.location}
               type="text"
               name="location"
               value={formData?.location || ""}
               onChange={handleInputChange}
               className="form-input"
+              onFocus={() => setFocusedInput("location")}
             />
           </div>
 
@@ -334,6 +416,7 @@ const UserPage = () => {
             <label htmlFor="birthday">Birthday:</label>
             <input
               id="birthday"
+              ref={inputRefs.birthday}
               type="date"
               name="birthday"
               value={
@@ -341,6 +424,7 @@ const UserPage = () => {
               }
               onChange={handleInputChange}
               className="form-input"
+              onFocus={() => setFocusedInput("birthday")}
             />
           </div>
 
@@ -348,15 +432,30 @@ const UserPage = () => {
             <label htmlFor="gender">Gender:</label>
             <select
               id="gender"
+              ref={inputRefs.gender}
               name="gender"
               value={formData?.gender || ""}
               onChange={handleInputChange}
               className="form-input"
+              onFocus={() => setFocusedInput("gender")}
             >
               <option value="">Select gender</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
             </select>
+          </div>
+
+          {/* File input doesn't need focus management */}
+          <div className="form-group">
+            <label htmlFor="profilePicture">Profile Picture:</label>
+            <input
+              id="profilePicture"
+              type="file"
+              name="profilePicture"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="form-input"
+            />
           </div>
 
           <div className="button-group">
@@ -442,7 +541,14 @@ const UserPage = () => {
       <div className="content-wrapper">
         <div className="profile-card">
           <div className="profile-header">
-            <div className="profile-picture"></div>
+            <div
+              className="profile-picture"
+              style={{
+                backgroundImage: `url(${profilePictureUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+            />
             <h2>
               {userData.username ||
                 userData.userName ||

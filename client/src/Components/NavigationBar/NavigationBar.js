@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../../Contexts/AuthContext";
 import "./NavigationBar.css";
@@ -8,6 +8,13 @@ function NavigationBar() {
   const isLoggedIn = !!auth.token && !auth.loading;
   const isManagerOrAdmin =
     auth.user?.isAdmin || auth.user?.userType === "company";
+
+  // Get profile picture URL with proper base URL and null check
+  const profilePicture = useMemo(() => {
+    return auth.user?.profile_picture
+      ? `http://localhost:5000${auth.user.profile_picture}`
+      : "/images/user-icon-2-secondary.png";
+  }, [auth.user?.profile_picture]);
 
   return (
     <nav className="navbar">
@@ -37,9 +44,15 @@ function NavigationBar() {
           <div>
             <Link to={`/users/user/${auth.user?.id}`} className="user-icon">
               <img
-                src="/images/user-icon-2-secondary.png"
-                alt="User Icon"
+                src={profilePicture}
+                alt="User Profile"
                 className="user-image"
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                }}
               />
             </Link>
           </div>
