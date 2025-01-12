@@ -5,6 +5,8 @@ const dotenv = require("dotenv");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { body, validationResult } = require("express-validator");
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
 
 dotenv.config();
 
@@ -24,6 +26,31 @@ const pool = new Pool({
   port: process.env.DB_PORT,
 });
 
+// Configure nodemailer
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+  debug: true, // Enable debug logs
+  logger: true, // Enable logging
+  maxConnections: 1,
+  maxMessages: 1,
+  connectionTimeout: 10000, // 10 seconds
+});
+
+// Test connection
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("SMTP Verification Error:", error);
+  } else {
+    console.log("Server ready for emails");
+  }
+});
+
 // Helper function to generate JWT
 const generateToken = (user) => {
   return jwt.sign(
@@ -36,6 +63,35 @@ const generateToken = (user) => {
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN }
   );
+};
+
+const createResetTokensTable = `
+  CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id),
+    token VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT FALSE
+  );
+  
+  CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
+`;
+
+// Initialize database tables when server starts
+const initDatabase = async () => {
+  try {
+    await pool.query(createResetTokensTable);
+    console.log("Password reset tokens table initialized");
+  } catch (error) {
+    console.error("Database initialization error:", error);
+    process.exit(1); // Exit if table creation fails
+  }
+};
+
+// Generate a secure random token
+const generateResetToken = () => {
+  return crypto.randomBytes(32).toString("hex");
 };
 
 // Middleware to authenticate token
@@ -291,9 +347,202 @@ app.put("/api/users/:user_id", authenticateToken, async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
+// Backend: Add this to your server.js file
+app.put(
+  "/api/users/:id/password",
+  authenticateToken,
+  [
+    body("currentPassword").exists(),
+    body("newPassword").isLength({ min: 8 }),
+    body("confirmPassword").custom((value, { req }) => {
+      if (value !== req.body.newPassword) {
+        throw new Error("Password confirmation does not match");
+      }
+      return true;
+    }),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const userId = parseInt(req.params.id);
+    const { currentPassword, newPassword } = req.body;
+
+    try {
+      // Verify user is changing their own password
+      if (req.user.id !== userId) {
+        return res
+          .status(403)
+          .json({ message: "Not authorized to change this user's password" });
+      }
+
+      // Get current user's password hash
+      const userQuery = "SELECT password FROM users WHERE user_id = $1";
+      const user = await pool.query(userQuery, [userId]);
+
+      if (user.rows.length === 0) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Verify current password
+      const isMatch = await bcrypt.compare(
+        currentPassword,
+        user.rows[0].password
+      );
+      if (!isMatch) {
+        return res
+          .status(401)
+          .json({ message: "Current password is incorrect" });
+      }
+
+      // Hash new password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+      // Update password
+      const updateQuery = "UPDATE users SET password = $1 WHERE user_id = $2";
+      await pool.query(updateQuery, [hashedPassword, userId]);
+
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Error changing password:", error.message);
+      res.status(500).json({ message: "Server error" });
+    }
+  }
+);
+
+// Forgot Password endpoint
+app.post(
+  "/api/forgot-password",
+  [body("email").isEmail().normalizeEmail()],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email } = req.body;
+
+    try {
+      // Find user
+      const userResult = await pool.query(
+        "SELECT user_id, email_address FROM users WHERE email_address = $1",
+        [email]
+      );
+
+      if (userResult.rows.length === 0) {
+        // Don't reveal if email exists
+        return res.json({
+          message:
+            "If an account exists with this email, a password reset link will be sent.",
+        });
+      }
+
+      const user = userResult.rows[0];
+      const token = generateResetToken();
+      const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
+
+      // Store token in database
+      await pool.query(
+        "INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)",
+        [user.user_id, token, expiresAt]
+      );
+
+      // Send email
+      const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`;
+
+      const mailOptions = {
+        from: process.env.SMTP_FROM,
+        to: email,
+        subject: "Password Reset Request",
+        html: `
+        <h1>Password Reset Request</h1>
+        <p>You requested to reset your password. Click the link below to reset it:</p>
+        <a href="${resetUrl}">Reset Password</a>
+        <p>This link will expire in 1 hour.</p>
+        <p>If you didn't request this, please ignore this email.</p>
+      `,
+      };
+
+      await transporter.sendMail(mailOptions);
+
+      res.json({
+        message:
+          "If an account exists with this email, a password reset link will be sent.",
+      });
+    } catch (error) {
+      console.error("Error in forgot password:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  }
+);
+
+// Reset Password endpoint
+app.post(
+  "/api/reset-password",
+  [body("token").trim().notEmpty(), body("newPassword").isLength({ min: 8 })],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { token, newPassword } = req.body;
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      // Find valid token
+      const tokenResult = await client.query(
+        `SELECT user_id, expires_at 
+       FROM password_reset_tokens 
+       WHERE token = $1 AND used = FALSE`,
+        [token]
+      );
+
+      if (tokenResult.rows.length === 0) {
+        return res
+          .status(400)
+          .json({ message: "Invalid or expired reset token" });
+      }
+
+      const resetToken = tokenResult.rows[0];
+
+      // Check if token is expired
+      if (new Date() > new Date(resetToken.expires_at)) {
+        return res.status(400).json({ message: "Reset token has expired" });
+      }
+
+      // Hash new password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+      // Update password
+      await client.query("UPDATE users SET password = $1 WHERE user_id = $2", [
+        hashedPassword,
+        resetToken.user_id,
+      ]);
+
+      // Mark token as used
+      await client.query(
+        "UPDATE password_reset_tokens SET used = TRUE WHERE token = $1",
+        [token]
+      );
+
+      await client.query("COMMIT");
+      res.json({ message: "Password successfully reset" });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      console.error("Error in reset password:", error);
+      res.status(500).json({ message: "Server error" });
+    } finally {
+      client.release();
+    }
+  }
+);
 
 // apis for event dashboard page
 
@@ -641,4 +890,9 @@ app.get("/api/users/:id/events", authenticateToken, async (req, res) => {
     console.error("Error fetching user events:", error);
     res.status(500).json({ message: "Server error" });
   }
+});
+
+app.listen(port, async () => {
+  await initDatabase();
+  console.log(`Server running on port ${port}`);
 });

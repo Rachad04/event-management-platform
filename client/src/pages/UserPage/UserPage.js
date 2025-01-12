@@ -31,6 +31,7 @@ const UserPage = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const { CurrentEventsContent, PreviousEventsContent } = EventsTab();
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   // Keep existing helper functions and effects...
   const handleInputChange = useCallback((e) => {
@@ -131,6 +132,127 @@ const UserPage = () => {
   if (loading) return <div>Loading...</div>;
   if (!userData) return <div>User not found</div>;
   if (error) return <div>{error}</div>;
+
+  const ChangePasswordModal = ({ isOpen, onClose }) => {
+    const [formData, setFormData] = useState({
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+    const { user_id } = useParams();
+
+    const handleChange = (e) => {
+      setFormData({
+        ...formData,
+        [e.target.name]: e.target.value,
+      });
+    };
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      setError("");
+      setSuccess("");
+
+      if (formData.newPassword !== formData.confirmPassword) {
+        setError("New passwords do not match");
+        return;
+      }
+
+      if (formData.newPassword.length < 8) {
+        setError("New password must be at least 8 characters long");
+        return;
+      }
+
+      try {
+        const response = await axiosInstance.put(
+          `/api/users/${user_id}/password`,
+          formData
+        );
+        setSuccess(response.data.message);
+        setFormData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+        // Close modal after successful password change
+        setTimeout(() => {
+          onClose();
+        }, 2000);
+      } catch (err) {
+        setError(err.response?.data?.message || "Failed to change password");
+      }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+      <div className="modal-overlay">
+        <div className="modal-content">
+          <div className="modal-header">
+            <h3>Change Password</h3>
+            <button className="modal-close" onClick={onClose}>
+              ×
+            </button>
+          </div>
+          <form onSubmit={handleSubmit} className="edit-form">
+            <div className="form-group">
+              <label htmlFor="currentPassword">Current Password:</label>
+              <input
+                id="currentPassword"
+                type="password"
+                name="currentPassword"
+                value={formData.currentPassword}
+                onChange={handleChange}
+                className="form-input"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="newPassword">New Password:</label>
+              <input
+                id="newPassword"
+                type="password"
+                name="newPassword"
+                value={formData.newPassword}
+                onChange={handleChange}
+                className="form-input"
+                required
+                minLength={8}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="confirmPassword">Confirm New Password:</label>
+              <input
+                id="confirmPassword"
+                type="password"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className="form-input"
+                required
+              />
+            </div>
+
+            {error && <div className="error-message">{error}</div>}
+            {success && <div className="success-message">{success}</div>}
+
+            <div className="modal-buttons">
+              <button type="submit" className="save-button">
+                Change Password
+              </button>
+              <button type="button" className="cancel-button" onClick={onClose}>
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
 
   const UserDetailsContent = () => (
     <>
@@ -249,6 +371,17 @@ const UserPage = () => {
             </div>
           ))}
           <button
+            className="change-password-button"
+            onClick={() => setIsPasswordModalOpen(true)}
+          >
+            Change Password
+          </button>
+
+          <ChangePasswordModal
+            isOpen={isPasswordModalOpen}
+            onClose={() => setIsPasswordModalOpen(false)}
+          />
+          <button
             className="modify-button"
             onClick={() => {
               setFormData({ ...userData });
@@ -286,7 +419,13 @@ const UserPage = () => {
         <div className="profile-card">
           <div className="profile-header">
             <div className="profile-picture"></div>
-            <h2>{userData.username || "Username"}</h2>
+            <h2>
+              {userData.username ||
+                userData.userName ||
+                userData.user_name ||
+                userData.Username ||
+                "Username"}
+            </h2>
           </div>
           <div className="profile-info">
             <p>

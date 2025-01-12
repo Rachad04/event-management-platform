@@ -13,6 +13,10 @@ import ProtectedRoute from "./Components/ProtectedRoute";
 import NavigationBar from "./Components/NavigationBar/NavigationBar";
 import EventDashboardPage from "./pages/EventDashboardPage/EventDashboardPage";
 import Page404 from "./pages/Page404/Page404";
+import {
+  ForgotPassword,
+  ResetPassword,
+} from "./Components/ForgotPassword/ForgotPassword";
 
 function App() {
   return (
@@ -42,6 +46,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
       </Routes>
     </BrowserRouter>
   );

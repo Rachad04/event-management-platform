@@ -1,7 +1,7 @@
 import React, { useState, useContext } from "react";
 import axios from "axios";
 import { AuthContext } from "../../Contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import "./LoginPage.css";
 
 function LoginPage() {
@@ -86,6 +86,9 @@ function LoginPage() {
         >
           {isLoading ? "Logging in..." : "Login"}
         </button>
+        <Link to="/forgot-password" className="forgot-password-link">
+          Forgot your password?
+        </Link>
       </form>
     </div>
   );

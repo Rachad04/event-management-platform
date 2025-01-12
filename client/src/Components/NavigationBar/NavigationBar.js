@@ -39,7 +39,7 @@ function NavigationBar() {
               <Link to="/manager">Manager</Link>
             </li>
             <li>
-              <Link to="/company-management">Company Users</Link>
+              <Link to="/company-management">Dashboard</Link>
             </li>
           </>
         )}
