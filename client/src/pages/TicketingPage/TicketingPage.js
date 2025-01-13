@@ -1,52 +1,80 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import axios from "axios";
 import "./TicketingPage.css";
 import noImageIcon from "./Images/logo-colors.png";
 
 const TicketingPage = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
+
   const [eventDetails, setEventDetails] = useState(null);
   const [tickets, setTickets] = useState(0);
+  const [totalFees, setTotalFees] = useState(0); // Track total fees in state
   const [paymentDetails, setPaymentDetails] = useState({
     cardNumber: "",
     cardHolder: "",
     expiryDate: "",
     cvv: "",
   });
+  const [loading, setLoading] = useState(true);
 
+  // Fetch event details from the backend
   useEffect(() => {
+    if (!eventId) {
+      console.error("No valid eventId provided. Redirecting home...");
+      navigate("/");
+      return;
+    }
+
     const fetchEventDetails = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/events/${eventId}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch event details");
+        const response = await axios.get(
+          `http://localhost:5000/api/events/${eventId}`
+        );
+
+        if (response.data) {
+          setEventDetails(response.data);
+        } else {
+          console.error("No event found for the given eventId.");
+          alert("Event not found. Redirecting to homepage.");
+          navigate("/");
         }
-        const data = await response.json();
-        setEventDetails(data);
       } catch (error) {
         console.error("Error fetching event details:", error);
-        navigate("/error"); // Redirect to an error page if needed
+        alert("Failed to load event details. Redirecting to homepage.");
+        navigate("/");
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchEventDetails();
   }, [eventId, navigate]);
 
-  const calculateTotalFees = () => {
-    if (!eventDetails) return 0;
-    return tickets * eventDetails.price;
+  // Update total fees when tickets or eventDetails change
+  useEffect(() => {
+    if (eventDetails) {
+      setTotalFees(tickets * eventDetails.price || 0);
+    }
+  }, [tickets, eventDetails]);
+
+  // Handle changes in ticket input
+  const handleTicketChange = (e) => {
+    const value = parseInt(e.target.value, 10);
+    setTickets(value >= 0 ? value : 0); // Ensure no negative values
   };
 
+  // Handle changes in payment input fields
   const handlePaymentChange = (e) => {
     const { name, value } = e.target;
     setPaymentDetails((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleCheckout = (e) => {
+  // Handle the checkout process
+  const handleCheckout = async (e) => {
     e.preventDefault();
 
-    // Input validation for payment details
     if (
       !paymentDetails.cardNumber ||
       !paymentDetails.cardHolder ||
@@ -57,18 +85,35 @@ const TicketingPage = () => {
       return;
     }
 
-    console.log("Payment Details:", paymentDetails);
-    console.log("Tickets Count:", tickets);
-    alert("Payment Successful! Thank you for your purchase.");
+    try {
+      const paymentResponse = await axios.post(
+        "http://localhost:5000/api/pay",
+        {
+          ticketId: eventId,
+          paymentMethod: "Credit Card",
+          tickets,
+        }
+      );
+
+      console.log("Payment successful:", paymentResponse.data);
+      alert("Payment Successful! Thank you for your purchase.");
+      navigate("/");
+    } catch (error) {
+      console.error("Payment failed:", error);
+      alert("Payment failed. Please try again.");
+    }
   };
 
-  if (!eventDetails) {
+  if (loading) {
     return <div>Loading event details...</div>;
+  }
+
+  if (!eventDetails) {
+    return <div>No event found!</div>;
   }
 
   return (
     <div className="ticketing-page">
-      {/* Title Section */}
       <div className="title-container">
         <button className="back-button" onClick={() => navigate(-1)}>
           &#x3C;
@@ -76,7 +121,6 @@ const TicketingPage = () => {
         <h1>{eventDetails.title}</h1>
       </div>
 
-      {/* Event Details */}
       <div className="ticket-info">
         <img
           src={eventDetails.image_url || noImageIcon}
@@ -96,7 +140,6 @@ const TicketingPage = () => {
         </div>
       </div>
 
-      {/* Ticket Selection */}
       <div className="ticket-selection">
         <h2>Select Tickets</h2>
         <div className="ticket-option">
@@ -106,19 +149,16 @@ const TicketingPage = () => {
             id="tickets"
             min="0"
             value={tickets}
-            onChange={(e) => setTickets(parseInt(e.target.value) || 0)}
+            onChange={handleTicketChange}
           />
         </div>
-
-        {/* Total Fees */}
         <div className="total-fees">
           <p>
-            <strong>Total Fees: </strong>${calculateTotalFees()}
+            <strong>Total Fees:</strong> ${totalFees.toFixed(2)}
           </p>
         </div>
       </div>
 
-      {/* Payment Section */}
       <div className="payment-section">
         <h2>Payment Details</h2>
         <form onSubmit={handleCheckout}>

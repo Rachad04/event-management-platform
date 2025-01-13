@@ -10,12 +10,10 @@
 body {
   font-family: Arial, sans-serif;
   margin: 0;
+  padding: 0;
   background-color: var(--light-gray);
   color: var(--primary-color);
-}
-
-.events-page {
-  padding-top: 8vh;
+  line-height: 1.6; /* Improves readability */
 }
 
 /* Hero Section */
@@ -30,6 +28,7 @@ body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  margin-bottom: 40px; /* Add spacing below hero section */
 }
 
 .hero-section h1 {
@@ -94,26 +93,28 @@ body {
 .events-title {
   text-align: center;
   font-size: 2.5rem;
-  margin: 20px 0;
+  margin: 40px 0 20px; /* Add margin to separate title from the content */
 }
 
 .events-container {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  padding: 20px;
-  padding-top: 0;
+  gap: 30px; /* Add more space between event cards */
+  padding: 0 20px; /* Add padding to the container */
+  margin-bottom: 40px; /* Add spacing below the section */
 }
 
 @media (max-width: 768px) {
   .events-container {
     grid-template-columns: repeat(2, 1fr);
+    gap: 20px; /* Adjust gap for smaller screens */
   }
 }
 
 @media (max-width: 480px) {
   .events-container {
     grid-template-columns: 1fr;
+    gap: 15px; /* Adjust gap for very small screens */
   }
 }
 
@@ -128,10 +129,12 @@ body {
   flex-direction: column;
   justify-content: space-between;
   height: 100%;
+  padding: 10px; /* Add padding inside the card */
 }
 
 .event-card:hover {
   transform: translateY(-5px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Event Card Images */
@@ -218,5 +221,6 @@ body {
   color: var(--light-gray);
   text-align: center;
   padding: 20px;
+  margin-top: 40px; /* Add spacing above the footer */
   font-size: 0.9rem;
 }

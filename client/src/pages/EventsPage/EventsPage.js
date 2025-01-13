@@ -1,15 +1,31 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./EventsPage.css";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import noImageIcon from "./Images/no-image.png";
 
+// Helper function for date formatting
+const formatEventDate = (dateString) => {
+  const options = {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: true,
+  };
+  return new Date(dateString).toLocaleDateString("en-US", options);
+};
+
 const EventsPage = () => {
-  const [events, setEvents] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState([]); // State for events
+  const [searchQuery, setSearchQuery] = useState(""); // State for search query
+  const [loading, setLoading] = useState(true); // State for loading spinner
+  const upcomingEventsRef = useRef(null); // Reference for scrolling to events
+  const navigate = useNavigate();
 
-  const upcomingEventsRef = useRef(null);
-
+  // Fetch events from the backend
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -18,21 +34,23 @@ const EventsPage = () => {
           throw new Error("Failed to fetch events");
         }
         const data = await response.json();
-        setEvents(data);
+        setEvents(data); // Populate events from the response
       } catch (error) {
         console.error("Error fetching events:", error);
       } finally {
-        setLoading(false);
+        setLoading(false); // Stop loading spinner
       }
     };
 
     fetchEvents();
   }, []);
 
+  // Handle search input changes
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
   };
 
+  // Filter events based on the search query without affecting their original order
   const filteredEvents = events.filter(
     (event) =>
       event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -41,6 +59,7 @@ const EventsPage = () => {
       )
   );
 
+  // Scroll to the "Upcoming Events" section
   const handleScrollToSection = () => {
     if (upcomingEventsRef.current) {
       upcomingEventsRef.current.scrollIntoView({ behavior: "smooth" });
@@ -87,22 +106,20 @@ const EventsPage = () => {
 
       {/* Upcoming Events Section */}
       <section id="upcoming-events" ref={upcomingEventsRef}>
-        <h1 id="upcoming-events" className="events-title">
-          Upcoming Events
-        </h1>
+        <h1 className="events-title">Upcoming Events</h1>
         <div className="events-container">
           {filteredEvents.map((event) => (
             <div className="event-card" key={event.id}>
               <div className="image-container">
                 <img
-                  src={event.image || noImageIcon}
+                  src={event.image_url || noImageIcon}
                   alt={event.title}
                   className="event-image"
                 />
               </div>
               <div className="event-details">
                 <h2 className="event-title">{event.title}</h2>
-                <p className="event-date">{event.date}</p>
+                <p className="event-date">{formatEventDate(event.date)}</p>
                 {event.location && (
                   <p className="event-location">{event.location}</p>
                 )}
@@ -116,7 +133,7 @@ const EventsPage = () => {
                 <button
                   className="event-button"
                   onClick={() => {
-                    window.location.href = `/tickets/${event.id}`;
+                    navigate(`/tickets/${event.event_id}`);
                   }}
                 >
                   Get Tickets
@@ -129,7 +146,7 @@ const EventsPage = () => {
 
       {/* Footer */}
       <footer className="footer">
-        <p>&copy; 2024 Evently. All Rights Reserved.</p>
+        <p>&copy; 2025 Evently. All Rights Reserved.</p>
       </footer>
     </div>
   );
