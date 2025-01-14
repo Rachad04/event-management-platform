@@ -134,7 +134,7 @@ function SignUpPage() {
             <option value="">Select Type</option>
             <option value="user">Person</option>
             <option value="company">Company</option>
-            <option value="sponsor">Sponsor</option>
+            {/* <option value="sponsor">Sponsor</option> */}
           </select>
         </div>
         <button
