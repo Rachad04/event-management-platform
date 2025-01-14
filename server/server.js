@@ -277,43 +277,48 @@ app.post(
   }
 );
 
-app.post(
-  "/api/login",
-  [body("identifier").trim().notEmpty(), body("password").exists()],
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+app.post("/api/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Check if user exists
+    const user = await pool.query(
+      "SELECT * FROM users WHERE email_address = $1",
+      [email]
+    );
+
+    if (user.rows.length === 0) {
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const { identifier, password } = req.body;
+    const existingUser = user.rows[0];
 
-    try {
-      // Check if user exists by email or username
-      const user = await pool.query(
-        "SELECT * FROM users WHERE email_address = $1 OR username = $1",
-        [identifier]
-      );
+    // Compare passwords
+    const isMatch = await bcrypt.compare(password, existingUser.password);
 
-      if (user.rows.length === 0) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      const existingUser = user.rows[0];
-      const isMatch = await bcrypt.compare(password, existingUser.password);
-
-      if (!isMatch) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      const token = generateToken(existingUser);
-      res.json({ token });
-    } catch (error) {
-      console.error(error.message);
-      res.status(500).send("Server error");
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials" });
     }
+
+    // Generate token
+    const token = generateToken(existingUser);
+
+    // Return token and user details
+    res.json({
+      token,
+      user: {
+        user_id: existingUser.user_id,
+        username: existingUser.username,
+        user_type: existingUser.user_type,
+        is_admin: existingUser.is_admin,
+        email: existingUser.email_address,
+      },
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("Server error");
   }
-);
+});
 
 app.put("/api/users/:user_id", authenticateToken, async (req, res) => {
   const userId = parseInt(req.params.user_id);
@@ -563,7 +568,7 @@ app.post(
 app.get("/api/user", authenticateToken, async (req, res) => {
   try {
     const userQuery = `
-      SELECT user_id, username, user_type 
+      SELECT user_id, username, user_type, is_admin
       FROM users 
       WHERE user_id = $1
     `;
@@ -577,7 +582,7 @@ app.get("/api/user", authenticateToken, async (req, res) => {
       id: user.rows[0].user_id,
       username: user.rows[0].username,
       userType: user.rows[0].user_type,
-      message: `Hello, ${user.rows[0].username}! This is a protected route.`,
+      isAdmin: user.rows[0].is_admin,
     });
   } catch (error) {
     console.error("Error fetching user data:", error.message);
@@ -1001,7 +1006,10 @@ app.get("/api/events", async (req, res) => {
 app.get("/api/tickets/:id", async (req, res) => {
   const eventId = req.params.id;
   try {
-    const result = await pool.query("SELECT * FROM tickets WHERE event_id = $1", [eventId]);
+    const result = await pool.query(
+      "SELECT * FROM tickets WHERE event_id = $1",
+      [eventId]
+    );
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -1018,5 +1026,46 @@ app.post("/api/pay", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Payment processing failed" });
+  }
+});
+
+app.get("/api/events/:id", async (req, res) => {
+  const eventId = req.params.id;
+  try {
+    const result = await pool.query(
+      "SELECT * FROM events WHERE event_id = $1",
+      [eventId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.post("/api/purchases", async (req, res) => {
+  const { user_id, event_id, purchase_date } = req.body;
+
+  // Validate required fields
+  if (!user_id || !event_id || !purchase_date) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    const result = await pool.query(
+      "INSERT INTO purchases (user_id, event_id, purchase_date) VALUES ($1, $2, $3) RETURNING *",
+      [user_id, event_id, purchase_date]
+    );
+
+    res.status(201).json({
+      message: "Purchase recorded successfully",
+      purchase: result.rows[0],
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -9,8 +9,7 @@ const TicketingPage = () => {
   const navigate = useNavigate();
 
   const [eventDetails, setEventDetails] = useState(null);
-  const [tickets, setTickets] = useState(0);
-  const [totalFees, setTotalFees] = useState(0); // Track total fees in state
+  const [tickets, setTickets] = useState(1); // Default ticket count is 1
   const [paymentDetails, setPaymentDetails] = useState({
     cardNumber: "",
     cardHolder: "",
@@ -18,15 +17,45 @@ const TicketingPage = () => {
     cvv: "",
   });
   const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // Fetch event details from the backend
+  // Check user authentication
   useEffect(() => {
-    if (!eventId) {
-      console.error("No valid eventId provided. Redirecting home...");
-      navigate("/");
-      return;
-    }
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const user = localStorage.getItem("user");
 
+        console.log("Token from localStorage:", token);
+        console.log("User from localStorage:", user);
+
+        if (!token || !user) {
+          throw new Error("No token or user");
+        }
+
+        // Optionally verify the token with an API call
+        const response = await axios.get("http://localhost:5000/api/user", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.status === 200) {
+          setIsLoggedIn(true);
+          console.log("User authenticated successfully.");
+        } else {
+          throw new Error("Unauthorized");
+        }
+      } catch (error) {
+        console.error("User not authenticated:", error.message);
+        setIsLoggedIn(false);
+        navigate("/login"); // Redirect to login if not authenticated
+      }
+    };
+
+    checkAuth();
+  }, [navigate]);
+
+  // Fetch event details
+  useEffect(() => {
     const fetchEventDetails = async () => {
       try {
         const response = await axios.get(
@@ -34,6 +63,7 @@ const TicketingPage = () => {
         );
 
         if (response.data) {
+          console.log("Fetched event details:", response.data);
           setEventDetails(response.data);
         } else {
           console.error("No event found for the given eventId.");
@@ -49,31 +79,41 @@ const TicketingPage = () => {
       }
     };
 
-    fetchEventDetails();
+    if (eventId) {
+      fetchEventDetails();
+    } else {
+      console.error("No valid eventId provided. Redirecting home...");
+      navigate("/");
+    }
   }, [eventId, navigate]);
 
-  // Update total fees when tickets or eventDetails change
-  useEffect(() => {
-    if (eventDetails) {
-      setTotalFees(tickets * eventDetails.price || 0);
-    }
-  }, [tickets, eventDetails]);
-
-  // Handle changes in ticket input
-  const handleTicketChange = (e) => {
-    const value = parseInt(e.target.value, 10);
-    setTickets(value >= 0 ? value : 0); // Ensure no negative values
+  const calculateTotalFees = () => {
+    if (!eventDetails) return 0;
+    return tickets * eventDetails.price;
   };
 
-  // Handle changes in payment input fields
   const handlePaymentChange = (e) => {
     const { name, value } = e.target;
     setPaymentDetails((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Handle the checkout process
   const handleCheckout = async (e) => {
     e.preventDefault();
+
+    if (!isLoggedIn) {
+      alert("Please log in to proceed with the checkout.");
+      navigate("/login");
+      return;
+    }
+
+    const user = JSON.parse(localStorage.getItem("user"));
+    const token = localStorage.getItem("token");
+
+    if (!user?.user_id || !token) {
+      alert("User not logged in or missing credentials. Please log in again.");
+      navigate("/login");
+      return;
+    }
 
     if (
       !paymentDetails.cardNumber ||
@@ -86,26 +126,54 @@ const TicketingPage = () => {
     }
 
     try {
+      // Process payment
       const paymentResponse = await axios.post(
         "http://localhost:5000/api/pay",
         {
           ticketId: eventId,
           paymentMethod: "Credit Card",
           tickets,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
       console.log("Payment successful:", paymentResponse.data);
-      alert("Payment Successful! Thank you for your purchase.");
+
+      // Record the purchase in the database
+      const purchaseResponse = await axios.post(
+        "http://localhost:5000/api/purchases",
+        {
+          user_id: user.user_id,
+          event_id: eventId,
+          purchase_date: new Date().toISOString(),
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      console.log("Purchase recorded:", purchaseResponse.data);
+
+      alert("Payment Successful! Your ticket purchase has been recorded.");
       navigate("/");
     } catch (error) {
-      console.error("Payment failed:", error);
-      alert("Payment failed. Please try again.");
+      console.error("Checkout error:", error);
+      if (error.response) {
+        alert(`Error: ${error.response.data.message}`);
+      } else {
+        alert("Unexpected error occurred. Please try again.");
+      }
     }
   };
 
   if (loading) {
     return <div>Loading event details...</div>;
+  }
+
+  if (!isLoggedIn) {
+    return <div>Redirecting to login...</div>;
   }
 
   if (!eventDetails) {
@@ -147,14 +215,14 @@ const TicketingPage = () => {
           <input
             type="number"
             id="tickets"
-            min="0"
+            min="1"
             value={tickets}
-            onChange={handleTicketChange}
+            onChange={(e) => setTickets(parseInt(e.target.value) || 1)}
           />
         </div>
         <div className="total-fees">
           <p>
-            <strong>Total Fees:</strong> ${totalFees.toFixed(2)}
+            <strong>Total Fees:</strong> ${calculateTotalFees()}
           </p>
         </div>
       </div>
@@ -209,7 +277,11 @@ const TicketingPage = () => {
               />
             </div>
           </div>
-          <button className="checkout-button" type="submit">
+          <button
+            className="checkout-button"
+            type="submit"
+            disabled={!isLoggedIn}
+          >
             Proceed to Checkout
           </button>
         </form>
