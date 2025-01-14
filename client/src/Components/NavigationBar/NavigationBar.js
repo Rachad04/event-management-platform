@@ -4,9 +4,19 @@ import { AuthContext } from "../../Contexts/AuthContext";
 import axios from "axios";
 import "./NavigationBar.css";
 
+// Create axios instance with default config and interceptor
 const axiosInstance = axios.create({
   baseURL: "http://localhost:5000",
   headers: { "Content-Type": "application/json" },
+});
+
+// Add interceptor to handle token
+axiosInstance.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 function NavigationBar() {
@@ -15,10 +25,12 @@ function NavigationBar() {
   const isLoggedIn = !!auth.token && !auth.loading;
   const isManagerOrAdmin =
     auth.user?.isAdmin || auth.user?.userType === "company";
+  const isCompany = auth.user?.userType === "company";
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (auth.user?.id) {
+      if (auth.user?.id && auth.token) {
+        // Check for both id and token
         try {
           const response = await axiosInstance.get(
             `/api/users/${auth.user.id}`
@@ -26,6 +38,11 @@ function NavigationBar() {
           setUserData(response.data);
         } catch (error) {
           console.error("Error fetching user data:", error);
+          // Handle 401 errors specifically
+          if (error.response?.status === 401) {
+            // You might want to trigger a logout here or refresh the token
+            console.log("Authentication error - you may need to log in again");
+          }
         }
       }
     };
@@ -33,7 +50,7 @@ function NavigationBar() {
     if (isLoggedIn) {
       fetchUserData();
     }
-  }, [auth.user?.id, isLoggedIn]);
+  }, [auth.user?.id, auth.token, isLoggedIn]); // Added auth.token to dependencies
 
   const profilePictureUrl = useMemo(() => {
     const profilePicture =
@@ -69,6 +86,13 @@ function NavigationBar() {
             </li>
             <li>
               <Link to="/company-management">Dashboard</Link>
+            </li>
+          </>
+        )}
+        {isCompany && (
+          <>
+            <li>
+              <Link to="/manage-company">Access</Link>
             </li>
           </>
         )}

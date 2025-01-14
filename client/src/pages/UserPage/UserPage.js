@@ -22,7 +22,6 @@ axiosInstance.interceptors.request.use((config) => {
 const UserPage = () => {
   const { user_id } = useParams();
   const navigate = useNavigate();
-  const { logout } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState("Details");
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +35,7 @@ const UserPage = () => {
   // Keep track of which input is currently focused
   const [focusedInput, setFocusedInput] = useState(null);
 
-  const { auth } = useContext(AuthContext);
+  const { auth, logout } = useContext(AuthContext);
 
   const profilePictureUrl = useMemo(() => {
     if (!userData?.profile_picture) {
@@ -107,11 +106,23 @@ const UserPage = () => {
     const fetchUserData = async () => {
       try {
         const loggedInUserId = localStorage.getItem("userId");
+
+        // check for undefined/null user_id
+        if (!user_id) {
+          setError("Invalid user ID");
+          setLoading(false);
+          return;
+        }
+
+        // Add check for auth state
+        if (!auth?.token) {
+          setError("Not authenticated");
+          setLoading(false);
+          return;
+        }
+
         if (loggedInUserId !== user_id) {
           setError("Unauthorized access");
-          setTimeout(() => {
-            setError("");
-          }, 3000);
           setLoading(false);
           return;
         }
@@ -119,17 +130,29 @@ const UserPage = () => {
         const response = await axiosInstance.get(`/api/users/${user_id}`);
         setUserData(response.data);
       } catch (err) {
+        console.error("Error fetching user data:", err);
         setError(err.response?.data?.message || "Failed to load user data");
-        setTimeout(() => {
-          setError("");
-        }, 3000);
       } finally {
         setLoading(false);
       }
     };
 
-    if (user_id) fetchUserData();
-  }, [user_id]);
+    fetchUserData();
+  }, [user_id, auth]);
+
+  useEffect(() => {
+    console.log("Token:", localStorage.getItem("token"));
+    console.log("User ID:", localStorage.getItem("userId"));
+    console.log("Auth state:", auth);
+  }, [auth]);
+
+  axiosInstance.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      console.error("API Error:", error.response?.data || error.message);
+      return Promise.reject(error);
+    }
+  );
 
   useEffect(() => {
     if (isEditing && userData) {
@@ -534,6 +557,7 @@ const UserPage = () => {
       style={{
         width: "100vw",
         height: "calc(100vh - 8vh)",
+        paddingTop: "8vh",
         backgroundImage: "url('/images/background.jpeg')",
         position: "absolute",
         overflow: "hidden",
@@ -588,7 +612,7 @@ const UserPage = () => {
             backgroundColor: "var(--neutral-1)",
             borderRadius: "0.5rem",
             width: "60vw",
-            height: "86%",
+            height: "76%",
             display: "flex",
             flexDirection: "column",
             padding: "2rem",

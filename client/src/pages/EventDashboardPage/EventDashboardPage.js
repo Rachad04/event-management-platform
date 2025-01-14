@@ -333,7 +333,7 @@ const EventDashboardPage = () => {
               <option value="">Choose an event</option>
               {events.map((event) => (
                 <option key={event.event_id} value={event.event_id}>
-                  {event.event_type}
+                  {event.title}
                 </option>
               ))}
             </select>

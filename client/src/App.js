@@ -12,6 +12,7 @@ import ManagerPage from "./pages/ManagerPage/ManagerPage";
 import ProtectedRoute from "./Components/ProtectedRoute";
 import NavigationBar from "./Components/NavigationBar/NavigationBar";
 import EventDashboardPage from "./pages/EventDashboardPage/EventDashboardPage";
+import ManagerSearchPage from "./pages/ManagerSearchPage/ManagerSearchPage";
 import Page404 from "./pages/Page404/Page404";
 import {
   ForgotPassword,
@@ -28,8 +29,24 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/sign-up" element={<SignUpPage />} />
         <Route path="/events" element={<EventsPage />} />
+        <Route path="/manager" element={<ManagerPage />} />
         <Route path="/tickets/:eventId" element={<TicketingPage />} />
-
+        <Route
+          path="/company-management"
+          element={
+            <ProtectedRoute>
+              <EventDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manage-company"
+          element={
+            <ProtectedRoute>
+              <ManagerSearchPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/users/user/:user_id"
           element={

@@ -252,6 +252,13 @@ app.post(
           "INSERT INTO users (email_address, username, password, user_type) VALUES ($1, $2, $3, $4) RETURNING *",
           [email, userName, hashedPassword, userType]
         );
+        if (userType === "company") {
+          const companyResult = await client.query(
+            "INSERT INTO managing_company (company_name, email_address, representative_manager_id, date_of_creation) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING *",
+            [email.split("@")[0], email, newUser.rows[0].user_id]
+          );
+          newUser.rows[0].company = companyResult.rows[0];
+        }
         await client.query("COMMIT");
 
         // Generate token
@@ -277,48 +284,43 @@ app.post(
   }
 );
 
-app.post("/api/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    // Check if user exists
-    const user = await pool.query(
-      "SELECT * FROM users WHERE email_address = $1",
-      [email]
-    );
-
-    if (user.rows.length === 0) {
-      return res.status(401).json({ message: "Invalid credentials" });
+app.post(
+  "/api/login",
+  [body("identifier").trim().notEmpty(), body("password").exists()],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
 
-    const existingUser = user.rows[0];
+    const { identifier, password } = req.body;
 
-    // Compare passwords
-    const isMatch = await bcrypt.compare(password, existingUser.password);
+    try {
+      // Check if user exists by email or username
+      const user = await pool.query(
+        "SELECT * FROM users WHERE email_address = $1 OR username = $1",
+        [identifier]
+      );
 
-    if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      if (user.rows.length === 0) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      const existingUser = user.rows[0];
+      const isMatch = await bcrypt.compare(password, existingUser.password);
+
+      if (!isMatch) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      const token = generateToken(existingUser);
+      res.json({ token });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).send("Server error");
     }
-
-    // Generate token
-    const token = generateToken(existingUser);
-
-    // Return token and user details
-    res.json({
-      token,
-      user: {
-        user_id: existingUser.user_id,
-        username: existingUser.username,
-        user_type: existingUser.user_type,
-        is_admin: existingUser.is_admin,
-        email: existingUser.email_address,
-      },
-    });
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Server error");
   }
-});
+);
 
 app.put("/api/users/:user_id", authenticateToken, async (req, res) => {
   const userId = parseInt(req.params.user_id);
@@ -983,14 +985,6 @@ app.post(
   }
 );
 
-// Add this to serve static files
-app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
-
-app.listen(port, async () => {
-  await initDatabase();
-  console.log(`Server running on port ${port}`);
-});
-
 // Get all events
 app.get("/api/events", async (req, res) => {
   try {
@@ -1068,4 +1062,152 @@ app.post("/api/purchases", async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Internal server error" });
   }
+});
+
+// Get current user's details including role
+app.get("/api/users/me", authenticateToken, async (req, res) => {
+  try {
+    const userQuery = `
+      SELECT user_id, username, user_type as role, email_address, first_name, last_name
+      FROM users 
+      WHERE user_id = $1
+    `;
+    const user = await pool.query(userQuery, [req.user.id]);
+
+    if (user.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(user.rows[0]);
+  } catch (error) {
+    console.error("Error fetching user data:", error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Create new event
+app.post(
+  "/api/events",
+  authenticateToken,
+  [
+    body("name").trim().notEmpty().withMessage("Event name is required"),
+    body("date").isISO8601().withMessage("Valid date is required"),
+    body("time")
+      .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+      .withMessage("Valid time is required"),
+    body("location").trim().notEmpty().withMessage("Location is required"),
+    body("price").isFloat({ min: 0 }).withMessage("Valid price is required"),
+  ],
+  async (req, res) => {
+    // Validate input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      // First verify user is a company
+      const userTypeQuery = `
+      SELECT user_type 
+      FROM users 
+      WHERE user_id = $1
+    `;
+      const userType = await pool.query(userTypeQuery, [req.user.id]);
+
+      if (userType.rows[0].user_type !== "company") {
+        return res
+          .status(403)
+          .json({ message: "Only company users can create events" });
+      }
+
+      const { name, date, time, location, price } = req.body;
+
+      // Combine date and time
+      const eventDateTime = new Date(`${date}T${time}`);
+
+      const insertQuery = `
+      INSERT INTO events (
+        title,
+        date,
+        location,
+        price,
+        quantity,
+        managing_company_id,
+        created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+      RETURNING *
+    `;
+
+      const result = await pool.query(insertQuery, [
+        name,
+        eventDateTime,
+        location,
+        price,
+        100, // Default quantity - adjust as needed
+        req.user.id, // Assuming managing_company_id matches user_id
+      ]);
+
+      res.status(201).json(result.rows[0]);
+    } catch (error) {
+      console.error("Error creating event:", error.message);
+      res.status(500).json({ message: "Server error" });
+    }
+  }
+);
+
+app.post("/api/companies/managers", authenticateToken, async (req, res) => {
+  const { managerId, companyId } = req.body;
+
+  try {
+    // Check if user making request is associated with company
+    const companyCheck = await pool.query(
+      "SELECT * FROM managing_company WHERE managing_company_id = $1",
+      [companyId]
+    );
+
+    if (companyCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
+    // Check if manager exists
+    const managerCheck = await pool.query(
+      "SELECT * FROM users WHERE user_id = $1",
+      [managerId]
+    );
+
+    if (managerCheck.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if the requesting user has permission to modify this company
+    const permissionCheck = await pool.query(
+      "SELECT * FROM managing_company WHERE managing_company_id = $1 AND representative_manager_id = $2",
+      [companyId, req.user.id]
+    );
+
+    if (permissionCheck.rows.length === 0) {
+      return res
+        .status(403)
+        .json({ message: "Unauthorized to modify this company" });
+    }
+
+    // Update company's manager
+    const updateResult = await pool.query(
+      "UPDATE managing_company SET representative_manager_id = $1 WHERE managing_company_id = $2 RETURNING *",
+      [managerId, companyId]
+    );
+
+    res.json(updateResult.rows[0]);
+  } catch (error) {
+    console.error("Error updating company manager:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Add this to serve static files
+app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
+
+app.listen(port, async () => {
+  await initDatabase();
+  console.log(`Server running on port ${port}`);
 });

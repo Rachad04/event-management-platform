@@ -7,6 +7,7 @@
   position: relative;
   justify-content: center;
   align-items: center;
+  padding-left: 5rem;
 }
 
 .profile-card {
@@ -14,7 +15,7 @@
   border-radius: 0.5rem;
   padding: 2rem; /* Adjust padding for balance */
   width: 16vw; /* Adjust width proportionally */
-  height: calc(100% - 5rem);
+  height: calc(100% - 10rem);
   display: flex;
   flex-direction: column;
   position: relative;

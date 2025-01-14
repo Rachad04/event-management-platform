@@ -1,70 +1,78 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./ManagerPage.css";
+import EventForm from "../../Components/EventForm/EventForm";
 
-// Setup axios instance
 const axiosInstance = axios.create({
   baseURL: "http://localhost:5000",
+
   headers: { "Content-Type": "application/json" },
 });
 
 axiosInstance.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
   return config;
 });
 
 const ManagerPage = () => {
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [eventData, setEventData] = useState({
-    name: "",
-    date: "",
-    location: "",
-  });
+  const [isCompany, setIsCompany] = useState(false);
 
-  // Check if the user is an admin
+  const [loading, setLoading] = useState(true);
+
+  const [error, setError] = useState("");
+
+  const [success, setSuccess] = useState("");
+
+  const [eventData, setEventData] = useState(null);
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await axiosInstance.get("/api/users/1");
-        if (
-          response.data.user_type === "manager" ||
-          response.data.isAdmin === true
-        ) {
-          setIsAdmin(true);
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          throw new Error("No token found. Please log in.");
+        }
+
+        const decodedToken = JSON.parse(atob(token.split(".")[1]));
+
+        const userId = decodedToken.id;
+
+        const response = await axiosInstance.get(`/api/users/${userId}`);
+
+        if (response.data.user_type === "company") {
+          setIsCompany(true);
+        } else {
+          throw new Error(
+            "Unauthorized access. Only companies can manage events."
+          );
         }
       } catch (err) {
-        setError("Failed to load user data.");
+        setError(err.message || "Failed to load user data.");
       } finally {
         setLoading(false);
       }
     };
+
     fetchUserData();
   }, []);
 
-  // Handle input changes for event creation
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setEventData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  // Handle event creation
-  const handleCreateEvent = async (e) => {
-    e.preventDefault();
+  const handleCreateEvent = async (eventData) => {
     try {
       const response = await axiosInstance.post("/api/events", eventData);
+
       setSuccess("Event created successfully!");
-      setEventData({ name: "", date: "", location: "" });
+
+      setError("");
+
+      setEventData(null);
     } catch (err) {
-      setError("Failed to create event.");
+      setError(err.response?.data?.message || "Failed to create event.");
     }
   };
 
@@ -73,56 +81,19 @@ const ManagerPage = () => {
   return (
     <div className="page-container">
       <div className="content-wrapper">
-        <div className="details-card">
-          <h2>Manage Events</h2>
+        <h2>Event Management</h2>
 
-          {error && <div className="error-message">{error}</div>}
-          {success && <div className="success-message">{success}</div>}
+        {error && <div className="error-message">{error}</div>}
 
-          {isAdmin ? (
-            <form onSubmit={handleCreateEvent} className="event-form">
-              <div className="form-group">
-                <label htmlFor="name">Event Name:</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={eventData.name}
-                  onChange={handleInputChange}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="date">Event Date:</label>
-                <input
-                  type="date"
-                  name="date"
-                  value={eventData.date}
-                  onChange={handleInputChange}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="location">Event Location:</label>
-                <input
-                  type="text"
-                  name="location"
-                  value={eventData.location}
-                  onChange={handleInputChange}
-                  className="form-input"
-                />
-              </div>
-              <div className="button-group">
-                <button type="submit" className="save-button">
-                  Create Event
-                </button>
-              </div>
-            </form>
-          ) : (
-            <div className="no-access-message">
-              You are not authorized to create events.
-            </div>
-          )}
-        </div>
+        {success && <div className="success-message">{success}</div>}
+
+        {isCompany ? (
+          <EventForm onSubmit={handleCreateEvent} initialData={eventData} />
+        ) : (
+          <div className="no-access-message">
+            You are not authorized to create events.
+          </div>
+        )}
       </div>
     </div>
   );

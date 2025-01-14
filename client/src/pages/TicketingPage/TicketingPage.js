@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { AuthContext } from "../../Contexts/AuthContext";
 import axios from "axios";
 import "./TicketingPage.css";
 import noImageIcon from "./Images/logo-colors.png";
@@ -7,9 +8,10 @@ import noImageIcon from "./Images/logo-colors.png";
 const TicketingPage = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
+  const { auth, isAuthenticated } = useContext(AuthContext);
 
   const [eventDetails, setEventDetails] = useState(null);
-  const [tickets, setTickets] = useState(1); // Default ticket count is 1
+  const [tickets, setTickets] = useState(1);
   const [paymentDetails, setPaymentDetails] = useState({
     cardNumber: "",
     cardHolder: "",
@@ -17,49 +19,25 @@ const TicketingPage = () => {
     cvv: "",
   });
   const [loading, setLoading] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // Check user authentication
+  // Redirect if not authenticated
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const user = localStorage.getItem("user");
-
-        console.log("Token from localStorage:", token);
-        console.log("User from localStorage:", user);
-
-        if (!token || !user) {
-          throw new Error("No token or user");
-        }
-
-        // Optionally verify the token with an API call
-        const response = await axios.get("http://localhost:5000/api/user", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (response.status === 200) {
-          setIsLoggedIn(true);
-          console.log("User authenticated successfully.");
-        } else {
-          throw new Error("Unauthorized");
-        }
-      } catch (error) {
-        console.error("User not authenticated:", error.message);
-        setIsLoggedIn(false);
-        navigate("/login"); // Redirect to login if not authenticated
-      }
-    };
-
-    checkAuth();
-  }, [navigate]);
+    if (!isAuthenticated && !loading) {
+      navigate("/login", { state: { from: `/event/${eventId}` } });
+    }
+  }, [isAuthenticated, loading, navigate, eventId]);
 
   // Fetch event details
   useEffect(() => {
     const fetchEventDetails = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:5000/api/events/${eventId}`
+          `http://localhost:5000/api/events/${eventId}`,
+          {
+            headers: auth.token
+              ? { Authorization: `Bearer ${auth.token}` }
+              : {},
+          }
         );
 
         if (response.data) {
@@ -85,7 +63,7 @@ const TicketingPage = () => {
       console.error("No valid eventId provided. Redirecting home...");
       navigate("/");
     }
-  }, [eventId, navigate]);
+  }, [eventId, navigate, auth.token]);
 
   const calculateTotalFees = () => {
     if (!eventDetails) return 0;
@@ -100,17 +78,14 @@ const TicketingPage = () => {
   const handleCheckout = async (e) => {
     e.preventDefault();
 
-    if (!isLoggedIn) {
-      alert("Please log in to proceed with the checkout.");
-      navigate("/login");
+    if (!isAuthenticated) {
+      alert("Please log in to proceed with checkout.");
+      navigate("/login", { state: { from: `/event/${eventId}` } });
       return;
     }
 
-    const user = JSON.parse(localStorage.getItem("user"));
-    const token = localStorage.getItem("token");
-
-    if (!user?.user_id || !token) {
-      alert("User not logged in or missing credentials. Please log in again.");
+    if (!auth.user?.id) {
+      alert("User information not found. Please log in again.");
       navigate("/login");
       return;
     }
@@ -135,27 +110,26 @@ const TicketingPage = () => {
           tickets,
         },
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${auth.token}` },
         }
       );
 
       console.log("Payment successful:", paymentResponse.data);
 
-      // Record the purchase in the database
+      // Record the purchase
       const purchaseResponse = await axios.post(
         "http://localhost:5000/api/purchases",
         {
-          user_id: user.user_id,
+          user_id: auth.user.id,
           event_id: eventId,
           purchase_date: new Date().toISOString(),
         },
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${auth.token}` },
         }
       );
 
       console.log("Purchase recorded:", purchaseResponse.data);
-
       alert("Payment Successful! Your ticket purchase has been recorded.");
       navigate("/");
     } catch (error) {
@@ -172,7 +146,7 @@ const TicketingPage = () => {
     return <div>Loading event details...</div>;
   }
 
-  if (!isLoggedIn) {
+  if (!isAuthenticated) {
     return <div>Redirecting to login...</div>;
   }
 
@@ -277,11 +251,7 @@ const TicketingPage = () => {
               />
             </div>
           </div>
-          <button
-            className="checkout-button"
-            type="submit"
-            disabled={!isLoggedIn}
-          >
+          <button className="checkout-button" type="submit">
             Proceed to Checkout
           </button>
         </form>
