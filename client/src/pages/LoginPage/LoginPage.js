@@ -30,7 +30,7 @@ function LoginPage() {
       localStorage.setItem("user", JSON.stringify(user));
 
       // Redirect to user dashboard
-      navigate(`events`, { replace: true });
+      navigate(`/events`, { replace: true });
     } catch (error) {
       console.error("Login error:", error);
       setIsLoading(false);
@@ -46,14 +46,14 @@ function LoginPage() {
 
   return (
     <div className="login-page">
-      <h2>Login</h2>
-      {errors.length > 0 &&
-        errors.map((error, index) => (
-          <p key={index} className="error-message">
-            {error.msg}
-          </p>
-        ))}
       <form className="login-form" onSubmit={onSubmit}>
+        <h2>Login</h2>
+        {errors.length > 0 &&
+          errors.map((error, index) => (
+            <p key={index} className="error-message">
+              {error.msg}
+            </p>
+          ))}
         <div>
           <label>Email:</label>
           <input
